@@ -96,7 +96,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_16%,rgba(255,255,255,0.24),transparent_24rem)]" />
 
         <div className="premium-shell relative z-10 grid items-center gap-12 pt-20 pb-14 sm:min-h-[100svh] sm:pt-28 sm:pb-24 lg:grid-cols-[minmax(0,1fr)_390px]">
-          <div className="max-w-5xl text-center lg:text-left">
+          <div className="min-w-0 w-full max-w-5xl text-center lg:text-left">
             <div className="animate-hero-1 mb-6 hidden sm:inline-flex items-center gap-3 rounded-lg border border-white/16 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/74 backdrop-blur-xl">
               <span className="h-1.5 w-1.5 rounded-full bg-[#8ee3d5]" />
               National park trip planning

@@ -27,7 +27,7 @@ export function HeroSearchAndStats({ parkCount }: { parkCount?: number }) {
     <>
       <form
         onSubmit={handleSearch}
-        className="animate-hero-3 glass-panel mx-auto mt-10 flex max-w-2xl flex-col gap-3 rounded-xl p-2 sm:flex-row sm:items-center lg:mx-0"
+        className="animate-hero-3 glass-panel mx-auto mt-10 flex w-full max-w-2xl flex-col gap-3 rounded-xl p-2 sm:flex-row sm:items-center lg:mx-0"
         style={{ background: "rgba(255,255,255,0.2)", borderColor: "rgba(255,255,255,0.32)" }}
       >
         <input

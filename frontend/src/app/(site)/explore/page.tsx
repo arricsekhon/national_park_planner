@@ -169,8 +169,8 @@ function ExploreContent() {
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_210px_auto_auto]">
-            <div className="relative">
+          <form onSubmit={handleSearch} className="mt-6 grid gap-3 grid-cols-2 lg:grid-cols-[minmax(0,1fr)_210px_auto_auto]">
+            <div className="relative col-span-2 lg:col-span-1">
               <input
                 type="text"
                 value={query}
@@ -204,7 +204,7 @@ function ExploreContent() {
             <select
               value={stateCode}
               onChange={(e) => setStateCode(e.target.value)}
-              className="min-h-14 rounded-full border px-5 text-sm font-semibold shadow-none"
+              className="col-span-2 sm:col-span-1 min-h-14 rounded-full border px-5 text-sm font-semibold shadow-none"
               style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
             >
               {US_STATES.map(([code, name]) => (
@@ -525,13 +525,41 @@ function ParkListCard({
   );
 }
 
+function ExploreSkeleton() {
+  return (
+    <div className="min-h-screen pt-[66px] animate-pulse" style={{ background: "var(--surface)" }}>
+      <div className="mx-auto flex max-w-[1680px] flex-col px-4 py-4 sm:px-6">
+        <div className="mb-4 rounded-[2.2rem] border p-5" style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.78)" }}>
+          <div className="h-3 w-16 rounded-full mb-3" style={{ background: "var(--linen)" }} />
+          <div className="h-10 w-56 rounded-full mb-2" style={{ background: "var(--linen)" }} />
+          <div className="h-3 w-80 rounded-full mb-6" style={{ background: "var(--linen)" }} />
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <div className="col-span-2 h-14 rounded-full" style={{ background: "var(--linen)" }} />
+            <div className="col-span-2 sm:col-span-1 h-14 rounded-full" style={{ background: "var(--linen)" }} />
+            <div className="h-14 rounded-full" style={{ background: "var(--linen)" }} />
+            <div className="h-14 rounded-full" style={{ background: "var(--linen)" }} />
+          </div>
+        </div>
+        <div className="rounded-[2rem] border p-4" style={{ background: "rgba(255,255,255,0.68)", borderColor: "rgba(255,255,255,0.76)" }}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-xl border p-3" style={{ background: "rgba(255,255,255,0.72)", borderColor: "var(--line)" }}>
+                <div className="h-44 rounded-xl mb-4" style={{ background: "var(--linen)" }} />
+                <div className="h-4 w-3/4 rounded-full mb-2" style={{ background: "var(--linen)" }} />
+                <div className="h-3 w-full rounded-full mb-1" style={{ background: "var(--linen)" }} />
+                <div className="h-3 w-1/2 rounded-full" style={{ background: "var(--linen)" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ExplorePage() {
   return (
-    <Suspense fallback={
-      <div className="pt-[66px] flex items-center justify-center h-screen" style={{ color: "var(--muted)" }}>
-        Loading…
-      </div>
-    }>
+    <Suspense fallback={<ExploreSkeleton />}>
       <ExploreContent />
     </Suspense>
   );

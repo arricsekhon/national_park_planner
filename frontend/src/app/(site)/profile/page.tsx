@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 
 interface JournalEntry { id: string; title: string; date: string; parkName: string; rating: number; }
 interface Trip { id: string; name: string; startDate: string; stops: { parkName: string }[]; }
+interface ParkRating { park_code: string; rating: number; }
 
 function initials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -29,6 +30,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [parkRatings, setParkRatings] = useState<ParkRating[]>([]);
   const [tab, setTab] = useState<"saved" | "journal" | "trips">("saved");
 
   useEffect(() => {
@@ -59,6 +61,13 @@ export default function ProfilePage() {
           startDate: (r.start_date as string) ?? "",
           stops: (r.stops as { parkName: string }[]) ?? [],
         })));
+      });
+
+    supabase.from("park_ratings")
+      .select("park_code,rating")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (data) setParkRatings(data as ParkRating[]);
       });
   }, [user, router]);
 
@@ -102,12 +111,13 @@ export default function ProfilePage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-8">
             {[
               { num: favorites.length, label: "Saved Parks" },
               { num: beenCount, label: "Been Here" },
               { num: wantCount, label: "Want to Go" },
               { num: entries.length, label: "Journal Entries" },
+              { num: parkRatings.length, label: "Parks Rated" },
             ].map(({ num, label }) => (
               <div
                 key={label}

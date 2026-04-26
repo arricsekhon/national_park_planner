@@ -167,10 +167,18 @@ function JournalContent() {
   };
 
   const deleteEntry = (id: string) => {
-    const next = entries.filter((entry) => entry.id !== id);
+    const entry = entries.find((e) => e.id === id);
+    const next = entries.filter((e) => e.id !== id);
     setEntries(next);
     setViewEntry(null);
     if (user) {
+      // Remove any photos stored in Supabase Storage
+      if (entry?.photos.length) {
+        const paths = entry.photos
+          .map((url) => { const m = url.match(/journal-photos\/(.+?)(\?|$)/); return m?.[1] ?? null; })
+          .filter((p): p is string => p !== null);
+        if (paths.length) void supabase.storage.from("journal-photos").remove(paths);
+      }
       supabase.from("journal_entries").delete().eq("id", id).eq("user_id", user.id)
         .then(({ error }) => { if (error) toast("Failed to delete entry", "error"); else toast("Entry deleted"); });
     } else {
@@ -585,6 +593,7 @@ function NewEntryForm({
   prefillParkCode?: string;
   prefillParkName?: string;
 }) {
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [parkName, setParkName] = useState(prefillParkName);
@@ -592,10 +601,13 @@ function NewEntryForm({
   const [rating, setRating] = useState(5);
   const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
   const [parkSearch, setParkSearch] = useState("");
   const [parkResults, setParkResults] = useState<Park[]>([]);
   const [searching, setSearching] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Stable entry ID so storage paths are consistent even if component re-renders
+  const [entryId] = useState(() => createLocalId("entry"));
 
   useEffect(() => {
     setDate(todayInputValue());
@@ -637,19 +649,43 @@ function NewEntryForm({
     });
   };
 
-  const handleSave = () => {
-    if (!title.trim()) return;
+  const handleSave = async () => {
+    if (!title.trim() || saving) return;
+    setSaving(true);
+
+    let finalPhotos = photos;
+    if (user && photos.some((p) => p.startsWith("data:"))) {
+      const results = await Promise.all(
+        photos.map(async (photo, i) => {
+          if (!photo.startsWith("data:")) return photo;
+          try {
+            const blob = await fetch(photo).then((r) => r.blob());
+            const ext = blob.type.split("/")[1] ?? "jpg";
+            const path = `${user.id}/${entryId}/${i}.${ext}`;
+            const { error } = await supabase.storage.from("journal-photos").upload(path, blob, { upsert: true });
+            if (error) return photo;
+            const { data: { publicUrl } } = supabase.storage.from("journal-photos").getPublicUrl(path);
+            return publicUrl;
+          } catch {
+            return photo;
+          }
+        })
+      );
+      finalPhotos = results;
+    }
+
     onSave({
-      id: createLocalId("entry"),
+      id: entryId,
       title: title.trim(),
       date,
       parkCode,
       parkName: parkName || "Unknown Park",
       rating,
       notes,
-      photos,
+      photos: finalPhotos,
       createdAt: new Date().toISOString(),
     });
+    setSaving(false);
   };
 
   return (
@@ -885,12 +921,12 @@ function NewEntryForm({
             </button>
             <button
               type="button"
-              onClick={handleSave}
-              disabled={!title.trim()}
+              onClick={() => void handleSave()}
+              disabled={!title.trim() || saving}
               className="rounded-lg py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-40"
               style={{ background: "var(--ink)" }}
             >
-              Save
+              {saving ? "Saving…" : "Save"}
             </button>
           </div>
         </aside>

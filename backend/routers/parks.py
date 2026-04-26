@@ -1,6 +1,7 @@
 import os
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
+from limiter import limiter
 
 router = APIRouter(prefix="/parks", tags=["parks"])
 
@@ -16,7 +17,9 @@ def nps_key() -> str:
 
 
 @router.get("")
+@limiter.limit("40/minute")
 async def search_parks(
+    request: Request,
     q: str = Query(default=""),
     stateCode: str = Query(default=""),
     limit: int = Query(default=20, le=500),
@@ -42,7 +45,8 @@ async def search_parks(
 
 
 @router.get("/{park_code}")
-async def get_park(park_code: str):
+@limiter.limit("60/minute")
+async def get_park(request: Request, park_code: str):
     params = {
         "api_key": nps_key(),
         "parkCode": park_code,
@@ -60,7 +64,8 @@ async def get_park(park_code: str):
 
 
 @router.get("/{park_code}/alerts")
-async def get_park_alerts(park_code: str):
+@limiter.limit("30/minute")
+async def get_park_alerts(request: Request, park_code: str):
     params = {"api_key": nps_key(), "parkCode": park_code, "limit": 20}
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{NPS_BASE}/alerts", params=params, timeout=10)
@@ -70,7 +75,8 @@ async def get_park_alerts(park_code: str):
 
 
 @router.get("/{park_code}/campgrounds")
-async def get_park_campgrounds(park_code: str):
+@limiter.limit("30/minute")
+async def get_park_campgrounds(request: Request, park_code: str):
     params = {"api_key": nps_key(), "parkCode": park_code, "limit": 20}
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{NPS_BASE}/campgrounds", params=params, timeout=10)
@@ -80,7 +86,8 @@ async def get_park_campgrounds(park_code: str):
 
 
 @router.get("/{park_code}/thingstodo")
-async def get_things_to_do(park_code: str, limit: int = Query(default=20, le=50)):
+@limiter.limit("30/minute")
+async def get_things_to_do(request: Request, park_code: str, limit: int = Query(default=20, le=50)):
     params = {"api_key": nps_key(), "parkCode": park_code, "limit": limit}
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{NPS_BASE}/thingstodo", params=params, timeout=10)

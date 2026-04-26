@@ -5,6 +5,7 @@ import FeaturedImageSwipe from "./FeaturedImageSwipe";
 import { HeroSearchAndStats } from "./HomeActions";
 import NearbySection from "./NearbySection";
 import UserCollection from "./UserCollection";
+import PersonalizedDashboard from "./PersonalizedDashboard";
 
 
 const HERO_LABEL = "National Park Planning";
@@ -167,6 +168,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <PersonalizedDashboard />
 
       <section className="premium-shell py-24 sm:py-32">
         <div className="grid items-end gap-10 lg:grid-cols-[0.9fr_1.1fr]">

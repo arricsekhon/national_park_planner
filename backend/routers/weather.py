@@ -1,6 +1,7 @@
 import os
 import httpx
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
+from limiter import limiter
 
 router = APIRouter(prefix="/weather", tags=["weather"])
 
@@ -8,7 +9,9 @@ OWM_BASE = "https://api.openweathermap.org/data/2.5"
 
 
 @router.get("")
+@limiter.limit("20/minute")
 async def get_weather(
+    request: Request,
     lat: float = Query(...),
     lon: float = Query(...),
 ):

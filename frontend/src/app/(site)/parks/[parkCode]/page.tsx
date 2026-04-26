@@ -8,6 +8,7 @@ import {
 import ParkHero from "./ParkHero";
 import TrailFilter from "./TrailFilter";
 import ParkRatingWidget from "./ParkRatingWidget";
+import ParkJournalSection from "./ParkJournalSection";
 import WeatherWidget from "./WeatherWidget";
 
 export async function generateMetadata({ params }: { params: Promise<{ parkCode: string }> }) {
@@ -279,6 +280,9 @@ export default async function ParkPage({ params }: { params: Promise<{ parkCode:
 
           {/* Rating — client island (only shows when user has marked "been") */}
           <ParkRatingWidget parkCode={park.parkCode} />
+
+          {/* User's journal entries for this park */}
+          <ParkJournalSection parkCode={park.parkCode} parkName={park.fullName} />
 
           {/* Contact */}
           {park.contacts?.phoneNumbers?.length > 0 && (

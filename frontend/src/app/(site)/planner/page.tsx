@@ -23,6 +23,7 @@ interface Trip {
   stops: TripStop[];
   notes: string;
   createdAt: string;
+  isPublic?: boolean;
 }
 
 type IconName =
@@ -153,6 +154,7 @@ function rowToTrip(row: Record<string, unknown>): Trip {
     stops: (row.stops as TripStop[]) ?? [],
     notes: (row.notes as string) ?? "",
     createdAt: row.created_at as string,
+    isPublic: (row.is_public as boolean) ?? false,
   };
 }
 
@@ -808,33 +810,45 @@ export default function PlannerPage() {
 }
 
 function ShareTripButton({ trip }: { trip: Trip }) {
-  const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
+  const [state, setState] = useState<"idle" | "working" | "copied">("idle");
 
   const handleShare = async () => {
+    if (state !== "idle") return;
+    setState("working");
     try {
-      const payload = btoa(encodeURIComponent(JSON.stringify(trip)));
-      const url = `${window.location.origin}/planner?trip=${payload}`;
+      let url: string;
+      if (user) {
+        // Make trip public in Supabase and share a clean /trips/{id} URL
+        await supabase.from("trips").update({ is_public: true }).eq("id", trip.id).eq("user_id", user.id);
+        url = `${window.location.origin}/trips/${trip.id}`;
+      } else {
+        // Guest fallback: encode trip data in URL
+        const payload = btoa(encodeURIComponent(JSON.stringify(trip)));
+        url = `${window.location.origin}/planner?trip=${payload}`;
+      }
       await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setState("copied");
+      setTimeout(() => setState("idle"), 2500);
     } catch {
-      /* ignore clipboard errors */
+      setState("idle");
     }
   };
 
   return (
     <button
       type="button"
-      onClick={handleShare}
-      className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition hover:bg-white/10"
+      onClick={() => void handleShare()}
+      disabled={state === "working"}
+      className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-50"
       style={{
         color: "rgba(255,255,255,0.78)",
         borderColor: "rgba(255,255,255,0.16)",
-        background: copied ? "rgba(255,255,255,0.12)" : "transparent",
+        background: state === "copied" ? "rgba(255,255,255,0.12)" : "transparent",
       }}
     >
       <Icon name="share" className="h-4 w-4" />
-      {copied ? "Copied" : "Share"}
+      {state === "working" ? "…" : state === "copied" ? "Copied!" : "Share"}
     </button>
   );
 }

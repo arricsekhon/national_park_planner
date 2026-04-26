@@ -196,19 +196,22 @@ export default async function HomePage() {
             <Link
               key={href}
               href={href}
-              className="group grid gap-5 px-6 py-8 transition-colors hover:bg-white/70 sm:px-8 lg:grid-cols-[120px_1fr_260px_40px] lg:items-center"
+              className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/70 sm:px-8 sm:py-5 lg:grid lg:grid-cols-[120px_1fr_260px_40px] lg:items-center lg:gap-5 lg:py-8"
               style={{ borderTop: index === 0 ? "none" : "1px solid var(--line)" }}
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
-                {eyebrow}
-              </p>
-              <h3 className="text-2xl font-semibold leading-tight" style={{ color: "var(--ink)" }}>
-                {title}
-              </h3>
-              <p className="text-sm leading-7" style={{ color: "var(--muted)" }}>
+              {/* On mobile: wraps eyebrow+title as one flex column. On lg: contents dissolves into grid. */}
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5 lg:contents">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
+                  {eyebrow}
+                </p>
+                <h3 className="text-base font-semibold leading-tight sm:text-xl lg:text-2xl" style={{ color: "var(--ink)" }}>
+                  {title}
+                </h3>
+              </div>
+              <p className="hidden text-sm leading-7 lg:block" style={{ color: "var(--muted)" }}>
                 {desc}
               </p>
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg transition-all group-hover:translate-x-1" style={{ background: "var(--ink)", color: "white" }}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all group-hover:translate-x-1 lg:h-10 lg:w-10" style={{ background: "var(--ink)", color: "white" }}>
                 →
               </span>
             </Link>

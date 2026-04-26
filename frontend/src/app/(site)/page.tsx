@@ -78,7 +78,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen overflow-hidden" style={{ background: "var(--surface)" }}>
-      <section className="relative min-h-[100svh] overflow-hidden text-white">
+      <section className="relative min-h-[55svh] overflow-hidden text-white sm:min-h-[100svh]">
         {heroImage ? (
           <Image
             src={heroImage.url}
@@ -95,7 +95,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.16)_46%,rgba(0,0,0,0.78)_100%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_16%,rgba(255,255,255,0.24),transparent_24rem)]" />
 
-        <div className="premium-shell relative z-10 grid min-h-[100svh] items-center gap-12 pt-28 pb-24 lg:grid-cols-[minmax(0,1fr)_390px]">
+        <div className="premium-shell relative z-10 grid items-center gap-12 pt-20 pb-14 sm:min-h-[100svh] sm:pt-28 sm:pb-24 lg:grid-cols-[minmax(0,1fr)_390px]">
           <div className="max-w-5xl text-center lg:text-left">
             <div className="animate-hero-1 mb-6 inline-flex items-center gap-3 rounded-lg border border-white/16 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/74 backdrop-blur-xl">
               <span className="h-1.5 w-1.5 rounded-full bg-[#8ee3d5]" />

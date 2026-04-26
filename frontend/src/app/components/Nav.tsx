@@ -90,7 +90,39 @@ export default function Nav() {
     router.push("/");
   };
 
+  const TAB_ITEMS = [
+    {
+      href: "/explore",
+      label: "Explore",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M2 21L8 8l4.5 8L16 10l6 11H2z"/>
+        </svg>
+      ),
+    },
+    {
+      href: "/planner",
+      label: "Plan",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+        </svg>
+      ),
+    },
+    {
+      href: "/journal",
+      label: "Journal",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+        </svg>
+      ),
+    },
+  ];
+
   return (
+    <>
     <nav
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
       style={{
@@ -339,5 +371,34 @@ export default function Nav() {
         </div>
       </div>
     </nav>
+
+    {/* Sticky bottom tab bar — mobile only, hidden on auth pages */}
+    {!pathname.startsWith("/auth") && (
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch"
+        style={{
+          background: "rgba(251,251,248,0.96)",
+          backdropFilter: "blur(24px) saturate(160%)",
+          borderTop: "1px solid rgba(17,19,21,0.08)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
+      >
+        {TAB_ITEMS.map(({ href, label, icon }) => {
+          const active = pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-colors"
+              style={{ color: active ? "var(--accent)" : "rgba(17,19,21,0.45)" }}
+            >
+              {icon}
+              <span className="text-[10px] font-semibold tracking-wide">{label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    )}
+    </>
   );
 }

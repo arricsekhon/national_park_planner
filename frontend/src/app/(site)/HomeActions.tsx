@@ -47,45 +47,66 @@ export function HeroSearchAndStats({ parkCount }: { parkCount?: number }) {
         </button>
       </form>
 
-      <div className="animate-hero-4 mt-5 flex flex-wrap justify-center gap-2 lg:justify-start">
-        {SEARCH_CHIPS.map((chip) => (
-          <Link
-            key={chip}
-            href={`/explore?q=${encodeURIComponent(chip)}`}
-            className="rounded-lg border border-white/16 bg-white/10 px-4 py-2 text-xs font-medium text-white/72 backdrop-blur transition-all hover:bg-white/18 hover:text-white"
-          >
-            {chip}
-          </Link>
-        ))}
+      <div
+        className="animate-hero-4 mt-5"
+        style={{ WebkitMaskImage: "linear-gradient(to right, black 82%, transparent 100%)", maskImage: "linear-gradient(to right, black 82%, transparent 100%)" }}
+      >
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
+          {SEARCH_CHIPS.map((chip) => (
+            <Link
+              key={chip}
+              href={`/explore?q=${encodeURIComponent(chip)}`}
+              className="shrink-0 snap-start rounded-lg border border-white/16 bg-white/10 px-4 py-2 text-xs font-medium text-white/72 backdrop-blur transition-all hover:bg-white/18 hover:text-white"
+            >
+              {chip}
+            </Link>
+          ))}
+        </div>
       </div>
 
-      <div className="animate-hero-4 mt-8 flex flex-col items-center gap-3 sm:flex-row lg:items-start">
+      <div className="animate-hero-4 mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center lg:items-start">
         <Link
           href="/planner"
-          className="inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-6 text-sm font-semibold text-[var(--ink)] transition-all hover:scale-[1.01] active:scale-95"
+          className="inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-6 text-sm font-semibold text-[var(--ink)] transition-all hover:scale-[1.01] active:scale-95 sm:w-auto"
         >
           Build a trip
         </Link>
         <Link
           href="/explore?q=hiking"
-          className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-6 text-sm font-semibold text-white/82 backdrop-blur-xl transition-all hover:bg-white/16"
+          className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-6 text-sm font-semibold text-white/82 backdrop-blur-xl transition-all hover:bg-white/16 sm:w-auto"
         >
           Browse hikes
         </Link>
       </div>
 
       <div className="animate-hero-4 mt-12 grid gap-3 rounded-xl border border-white/14 bg-white/10 p-3 backdrop-blur-2xl sm:grid-cols-4 lg:col-span-2">
-        {[
-          { num: parkCount ? parkCount.toLocaleString() : "474", label: "Park sites" },
-          { num: favorites.length.toString(), label: user ? "Saved by you" : "Saved" },
-          { num: beenCount.toString(), label: "Visited" },
-          { num: wantCount.toString(), label: "Want to go" },
-        ].map(({ num, label }) => (
-          <div key={label} className="rounded-lg bg-white/[0.08] px-5 py-4 text-center">
-            <p className="text-3xl font-semibold">{num}</p>
-            <p className="mt-1 text-xs font-medium text-white/58">{label}</p>
+        <div className="rounded-lg bg-white/[0.08] px-5 py-4 text-center">
+          <p className="text-3xl font-semibold">{parkCount ? parkCount.toLocaleString() : "474"}</p>
+          <p className="mt-1 text-xs font-medium text-white/58">Park sites</p>
+        </div>
+        {user ? (
+          <>
+            {[
+              { num: favorites.length, label: "Saved by you" },
+              { num: beenCount, label: "Visited" },
+              { num: wantCount, label: "Want to go" },
+            ].map(({ num, label }) => (
+              <div key={label} className="rounded-lg bg-white/[0.08] px-5 py-4 text-center">
+                <p className="text-3xl font-semibold">{num}</p>
+                <p className="mt-1 text-xs font-medium text-white/58">{label}</p>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="sm:col-span-3 flex items-center justify-center rounded-lg bg-white/[0.08] px-5 py-4">
+            <Link
+              href="/auth/signin"
+              className="text-sm font-medium text-white/62 transition-colors hover:text-white"
+            >
+              Sign in to track your visits →
+            </Link>
           </div>
-        ))}
+        )}
       </div>
     </>
   );

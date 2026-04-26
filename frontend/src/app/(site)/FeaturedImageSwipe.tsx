@@ -7,6 +7,18 @@ import type { Park } from "@/lib/api";
 
 export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
   const [active, setActive] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const goNext = () => setActive((index) => (index + 1) % parks.length);
+  const goPrev = () => setActive((index) => (index - 1 + parks.length) % parks.length);
+
+  const handleTouchStart = (e: React.TouchEvent) => setTouchStartX(e.touches[0].clientX);
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const delta = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(delta) > 40) delta > 0 ? goNext() : goPrev();
+    setTouchStartX(null);
+  };
 
   if (parks.length === 0) {
     return (
@@ -22,12 +34,15 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
   const current = parks[active % parks.length];
   const currentFee = current.entranceFees?.[0];
   const currentActivities = current.activities?.slice(0, 3).map((activity) => activity.name).join(" · ");
-  const goNext = () => setActive((index) => (index + 1) % parks.length);
-  const goPrev = () => setActive((index) => (index - 1 + parks.length) % parks.length);
 
   return (
     <div>
-      <div className="relative overflow-hidden rounded-xl border" style={{ borderColor: "rgba(255,255,255,0.72)", background: "var(--surface-soft)", boxShadow: "0 36px 110px rgba(17,19,21,0.16)" }}>
+      <div
+        className="relative overflow-hidden rounded-xl border"
+        style={{ borderColor: "rgba(255,255,255,0.72)", background: "var(--surface-soft)", boxShadow: "0 36px 110px rgba(17,19,21,0.16)" }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <div
           className="flex transition-transform duration-700 ease-out"
           style={{ transform: `translateX(-${active * 100}%)` }}
@@ -56,11 +71,11 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.18)_46%,rgba(0,0,0,0.82)_100%)]" />
 
                 <div className="absolute left-5 right-5 top-5 flex items-center justify-between gap-3">
-                  <span className="rounded-lg border border-white/20 bg-black/24 px-4 py-2 text-xs font-semibold text-white/82 backdrop-blur-xl">
+                  <span className="rounded-lg border border-white/20 bg-black/52 px-4 py-2 text-xs font-semibold text-white backdrop-blur-xl">
                     {park.states}
                   </span>
                   {fee && (
-                    <span className="rounded-lg border border-white/20 bg-white/16 px-4 py-2 text-xs font-semibold text-white backdrop-blur-xl">
+                    <span className="rounded-lg border border-white/20 bg-black/52 px-4 py-2 text-xs font-semibold text-white backdrop-blur-xl">
                       {parseFloat(fee.cost) === 0 ? "Free entry" : `$${fee.cost} entry`}
                     </span>
                   )}
@@ -73,7 +88,7 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
                   <h3 className="max-w-4xl text-4xl font-semibold leading-[0.96] sm:text-7xl">
                     {park.fullName}
                   </h3>
-                  <p className="mt-5 max-w-2xl text-base leading-7 text-white/68">
+                  <p className="mt-5 max-w-2xl text-base leading-7 text-white/68 line-clamp-2">
                     {park.description}
                   </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-white/72">

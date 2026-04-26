@@ -169,7 +169,7 @@ function ExploreContent() {
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="mt-6 grid gap-3 grid-cols-2 lg:grid-cols-[minmax(0,1fr)_210px_auto_auto]">
+          <form onSubmit={handleSearch} className="mt-6 grid gap-3 grid-cols-2 lg:grid-cols-[minmax(0,1fr)_210px_auto]">
             <div className="relative col-span-2 lg:col-span-1">
               <input
                 type="text"
@@ -214,38 +214,47 @@ function ExploreContent() {
 
             <button
               type="submit"
-              className="min-h-14 rounded-full px-7 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-95"
+              className="col-span-2 sm:col-span-1 min-h-14 rounded-full px-7 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-95"
               style={{ background: "var(--ink)", boxShadow: "0 14px 34px rgba(17,19,21,0.16)" }}
             >
               Search
-            </button>
-
-            <button
-              type="button"
-              onClick={handleNearMe}
-              disabled={nearMeLoading}
-              className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border px-6 text-sm font-semibold transition-all hover:bg-white disabled:opacity-40"
-              style={{ borderColor: userLocation ? "rgba(23,109,101,0.34)" : "var(--line)", color: userLocation ? "var(--accent)" : "var(--ink)", background: "rgba(255,255,255,0.62)" }}
-            >
-              {nearMeLoading ? (
-                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3"/>
-                  <path d="M12 3a9 9 0 019 9"/>
-                </svg>
-              ) : (
-                <span className="h-2 w-2 rounded-full" style={{ background: userLocation ? "var(--accent)" : "var(--muted)" }} />
-              )}
-              {userLocation ? "Near me" : "Use location"}
             </button>
           </form>
 
           <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative">
             <div className="flex gap-2 overflow-x-auto pb-1 pr-10">
+              {/* Near me chip */}
+              <button
+                type="button"
+                onClick={handleNearMe}
+                disabled={nearMeLoading}
+                className="shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all active:scale-95 disabled:opacity-40"
+                style={{
+                  background: userLocation ? "var(--accent)" : "rgba(255,255,255,0.7)",
+                  color: userLocation ? "white" : "var(--muted)",
+                  border: `1px solid ${userLocation ? "transparent" : "var(--line)"}`,
+                }}
+              >
+                {nearMeLoading ? (
+                  <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                    <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3"/>
+                    <path d="M12 3a9 9 0 019 9"/>
+                  </svg>
+                ) : (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                    <path d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z"/><circle cx="12" cy="9" r="2.5"/>
+                  </svg>
+                )}
+                {userLocation ? "Near me" : "Near me"}
+              </button>
+
+              <span className="w-px self-stretch mx-1" style={{ background: "var(--line)" }} aria-hidden="true" />
+
               {/* Designation toggle */}
               <button
                 onClick={() => setNpOnly((v) => !v)}
-                className="shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all"
+                className="shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all active:scale-95"
                 style={{
                   background: npOnly ? "#a96f2d" : "rgba(255,255,255,0.7)",
                   color: npOnly ? "white" : "var(--muted)",
@@ -265,7 +274,7 @@ function ExploreContent() {
 
               <button
                 onClick={() => setActivityFilter("")}
-                className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all"
+                className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all active:scale-95"
                 style={{
                   background: activityFilter === "" ? "var(--ink)" : "rgba(255,255,255,0.7)",
                   color: activityFilter === "" ? "white" : "var(--muted)",
@@ -278,7 +287,7 @@ function ExploreContent() {
                 <button
                   key={act}
                   onClick={() => setActivityFilter(activityFilter === act ? "" : act)}
-                  className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:-translate-y-0.5"
+                  className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:-translate-y-0.5 active:scale-95"
                   style={{
                     background: activityFilter === act ? "var(--accent)" : "rgba(255,255,255,0.7)",
                     color: activityFilter === act ? "white" : "var(--muted)",
@@ -408,15 +417,17 @@ function ParkListCard({
   return (
     <article onMouseEnter={onHover}>
       <div
-        className="group overflow-hidden rounded-xl border p-2.5 transition-all duration-300 hover:-translate-y-1"
+        className="group relative overflow-hidden rounded-xl border p-2.5 transition-all duration-300 hover:-translate-y-1"
         style={{
           background: selected ? "rgba(229,242,239,0.92)" : "rgba(255,255,255,0.74)",
           borderColor: selected ? "rgba(23,109,101,0.28)" : "var(--line)",
           boxShadow: selected ? "0 18px 48px rgba(23,109,101,0.13)" : "0 10px 34px rgba(17,19,21,0.06)",
         }}
       >
+        {/* Full-card link — action buttons sit above via z-index */}
+        <Link href={`/parks/${park.parkCode}`} className="absolute inset-0 z-0 rounded-xl" aria-label={`View ${park.fullName}`} />
+
         <div className="relative h-44 overflow-hidden rounded-[1.25rem]" style={{ background: "var(--surface-soft)" }}>
-          <Link href={`/parks/${park.parkCode}`} className="absolute inset-0 z-10" aria-label={`View ${park.fullName}`} />
           {image && (
             <Image
               src={image.url}
@@ -460,12 +471,10 @@ function ParkListCard({
         <div className="px-2 pb-2 pt-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <Link href={`/parks/${park.parkCode}`} className="block">
-                <p className="line-clamp-2 text-lg font-semibold leading-tight" style={{ color: "var(--ink)" }}>
-                  {park.fullName}
-                </p>
-                <p className="mt-2 line-clamp-2 text-sm leading-6" style={{ color: "var(--muted)" }}>{park.description}</p>
-              </Link>
+              <p className="line-clamp-2 text-lg font-semibold leading-tight" style={{ color: "var(--ink)" }}>
+                {park.fullName}
+              </p>
+              <p className="mt-2 line-clamp-2 text-sm leading-6" style={{ color: "var(--muted)" }}>{park.description}</p>
             </div>
           </div>
 
@@ -482,7 +491,7 @@ function ParkListCard({
             ))}
           </div>
 
-          <div className="mt-4 flex items-center justify-between gap-3 border-t pt-3" style={{ borderColor: "var(--line)" }}>
+          <div className="relative z-10 mt-4 flex items-center justify-between gap-3 border-t pt-3" style={{ borderColor: "var(--line)" }}>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -519,9 +528,9 @@ function ParkListCard({
                 </svg>
               </button>
             </div>
-            <Link href={`/parks/${park.parkCode}`} className="text-sm font-semibold underline-offset-4 transition-all hover:underline group-hover:translate-x-0.5" style={{ color: "var(--ink)" }}>
-              Details
-            </Link>
+            <span className="text-sm font-semibold transition-all group-hover:translate-x-0.5" style={{ color: "var(--ink)" }}>
+              Details →
+            </span>
           </div>
         </div>
       </div>

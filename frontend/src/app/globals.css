@@ -2,6 +2,10 @@
 
 body { overflow-x: clip; }
 
+@media (max-width: 767px) {
+  body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+}
+
 :root {
   /* Core design tokens */
   --ink: #111315;

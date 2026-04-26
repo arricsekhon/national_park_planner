@@ -1,0 +1,314 @@
+@import "tailwindcss";
+
+:root {
+  /* Core design tokens */
+  --ink: #111315;
+  --ink-soft: #2b3033;
+  --muted: #6d7378;
+  --muted-strong: #50575d;
+  --line: rgba(17, 19, 21, 0.09);
+  --surface: #fbfbf8;
+  --surface-soft: #f3f4f1;
+  --surface-elevated: rgba(255, 255, 255, 0.78);
+  --glass: rgba(255, 255, 255, 0.68);
+  --accent: #176d65;
+  --accent-bright: #0f8a7d;
+  --accent-soft: #e5f2ef;
+  --sand: #ede7da;
+  --sky: #dce9f3;
+  --amber: #a96f2d;
+  --amber-warm: #c38a45;
+  --linen: #e5e2dc;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 12px rgba(17, 19, 21, 0.05);
+  --shadow-card: 0 18px 60px rgba(17, 19, 21, 0.08);
+  --shadow-card-hover: 0 28px 86px rgba(17, 19, 21, 0.15);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  --radius-xl: 28px;
+
+  /* Legacy aliases — kept for backward compat, use canonical tokens in new code */
+  --forest-deep: var(--ink);
+  --forest-dark: #121819;
+  --forest-mid: var(--accent);
+  --forest-sage: #4f7771;
+  --forest-light: #8fb7b0;
+  --forest-mist: var(--accent-soft);
+  --cream: var(--surface);
+  --parchment: var(--surface-soft);
+  --bark: var(--muted-strong);
+  --stone-warm: var(--muted);
+}
+
+@theme inline {
+  --font-display: var(--font-playfair);
+  --font-sans: var(--font-dm-sans);
+
+  /* Color tokens available as Tailwind utilities (text-ink, bg-surface, etc.) */
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-linen: var(--linen);
+  --color-sand: var(--sand);
+  --color-amber: var(--amber);
+}
+
+/* ─── Animations ─────────────────────────────────────────────── */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50% { transform: translateY(-14px) rotate(-1deg); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(32px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.4; }
+}
+
+@keyframes dash {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes heroReveal {
+  from { opacity: 0; transform: translateY(36px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+.animate-float { animation: float 7s ease-in-out infinite; }
+.animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; }
+.animate-fade-in-up-1 { opacity: 0; animation: fadeInUp 0.8s ease-out 0.1s forwards; }
+.animate-fade-in-up-2 { opacity: 0; animation: fadeInUp 0.8s ease-out 0.25s forwards; }
+.animate-fade-in-up-3 { opacity: 0; animation: fadeInUp 0.8s ease-out 0.4s forwards; }
+.animate-fade-in-up-4 { opacity: 0; animation: fadeInUp 0.8s ease-out 0.55s forwards; }
+.animate-fade-in-right { opacity: 0; animation: fadeInRight 0.9s ease-out 0.3s forwards; }
+.animate-hero-1 { opacity: 0; animation: heroReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards; }
+.animate-hero-2 { opacity: 0; animation: heroReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards; }
+.animate-hero-3 { opacity: 0; animation: heroReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards; }
+.animate-hero-4 { opacity: 0; animation: heroReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards; }
+
+.trail-path {
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+  animation: dash 2.5s ease-out 0.8s forwards;
+}
+
+.pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* ─── Base ────────────────────────────────────────────────────── */
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(circle at 14% -6%, rgba(220, 233, 243, 0.68), transparent 30rem),
+    radial-gradient(circle at 92% 8%, rgba(229, 242, 239, 0.88), transparent 28rem),
+    linear-gradient(180deg, #fbfbf8 0%, #f5f6f3 44%, #fbfbf8 100%);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+}
+
+/* Subtle film grain across the entire site */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99998;
+  opacity: 0.026;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 160px 160px;
+}
+
+::selection {
+  background: rgba(23, 109, 101, 0.18);
+}
+
+button, a, input, textarea, select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+  background-color: rgba(255, 255, 255, 0.82);
+}
+
+input:focus, textarea:focus, select:focus, button:focus-visible, a:focus-visible {
+  outline: 2px solid rgba(23, 109, 101, 0.36);
+  outline-offset: 3px;
+}
+
+/* ─── Tooltip system ────────────────────────────────────────── */
+
+.icon-btn-tooltip {
+  position: relative;
+}
+.icon-btn-tooltip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: white;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  translate: 0 3px;
+  z-index: 60;
+  font-family: var(--font-dm-sans), sans-serif;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 16px rgba(17,19,21,0.24);
+}
+.icon-btn-tooltip:hover::after {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* ─── Shared card hover ─────────────────────────────────────── */
+
+.park-card {
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 420ms ease, border-color 420ms ease;
+}
+.park-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* ─── Layout utilities ──────────────────────────────────────── */
+
+.premium-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin-inline: auto;
+}
+
+.glass-panel {
+  background: var(--glass);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(26px) saturate(140%);
+}
+
+.premium-button {
+  background: var(--ink);
+  color: var(--surface);
+  box-shadow: 0 14px 38px rgba(17, 19, 21, 0.18);
+}
+.premium-button:hover {
+  background: #252a2d;
+}
+
+/* Ink-fill button — adapts in dark mode without inline color hacks */
+.btn-ink {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* ─── Shimmer skeleton ──────────────────────────────────────── */
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--linen) 25%, #edeae4 50%, var(--linen) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ─── Reduced motion ────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+  body::after { display: none; }
+}
+
+/* ─── Dark mode ─────────────────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #eceae7;
+    --ink-soft: #ccd0d4;
+    --muted: #767d84;
+    --muted-strong: #96a0a8;
+    --line: rgba(255, 255, 255, 0.09);
+    --surface: #0d0f10;
+    --surface-soft: #13161a;
+    --surface-elevated: rgba(22, 28, 32, 0.92);
+    --glass: rgba(16, 22, 28, 0.78);
+    --accent: #22b5a5;
+    --accent-bright: #2ed0be;
+    --accent-soft: rgba(34, 181, 165, 0.18);
+    --sand: #221f1a;
+    --sky: #141c26;
+    --amber: #d4903c;
+    --amber-warm: #e6a852;
+    --linen: #1a1c1e;
+
+    --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 18px 60px rgba(0, 0, 0, 0.56);
+    --shadow-card-hover: 0 28px 86px rgba(0, 0, 0, 0.72);
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 14% -6%, rgba(20, 28, 44, 0.8), transparent 30rem),
+      radial-gradient(circle at 92% 8%, rgba(22, 40, 36, 0.9), transparent 28rem),
+      linear-gradient(180deg, #0d0f10 0%, #0a0c0d 44%, #0d0f10 100%);
+  }
+
+  ::selection {
+    background: rgba(34, 181, 165, 0.28);
+  }
+
+  :where(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+    background-color: rgba(26, 32, 38, 0.88);
+    color: var(--ink);
+  }
+
+  .glass-panel {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .premium-button:hover {
+    background: #d6d2cc;
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, var(--linen) 25%, #222426 50%, var(--linen) 75%);
+    background-size: 200% 100%;
+  }
+}

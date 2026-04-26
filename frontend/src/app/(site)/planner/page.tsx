@@ -5,6 +5,7 @@ import Link from "next/link";
 import { searchParks, type Park } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/lib/toast";
 
 interface TripStop {
   id: string;
@@ -157,6 +158,7 @@ function rowToTrip(row: Record<string, unknown>): Trip {
 
 export default function PlannerPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [parkSearch, setParkSearch] = useState("");
@@ -283,8 +285,10 @@ export default function PlannerPage() {
     if (error) {
       console.error("[planner] save error:", error);
       setSaveMsg("error");
+      toast("Failed to save trip", "error");
     } else {
       setSaveMsg("saved");
+      toast("Trip saved");
     }
     setTimeout(() => setSaveMsg(null), 2500);
   };
@@ -363,6 +367,14 @@ export default function PlannerPage() {
           "linear-gradient(180deg, rgba(251,251,248,0.92) 0%, rgba(245,246,243,0.96) 48%, rgba(251,251,248,1) 100%)",
       }}
     >
+      {!user && (
+        <div className="mx-auto max-w-[1540px] px-4 pt-4">
+          <div className="flex items-center justify-between gap-4 rounded-xl px-4 py-3 text-sm" style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)", color: "var(--accent)" }}>
+            <span className="font-medium">Sign in to save your trips to the cloud.</span>
+            <Link href="/auth/signin" className="font-semibold underline underline-offset-2 shrink-0">Sign in</Link>
+          </div>
+        </div>
+      )}
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
         <aside
           className="rounded-lg border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]"

@@ -1,47 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useParkData, type FavoritePark } from "@/lib/park-data";
+import { supabase } from "@/lib/supabase";
 
 interface JournalEntry { id: string; title: string; date: string; parkName: string; rating: number; }
 interface Trip { id: string; name: string; startDate: string; stops: { parkName: string }[]; }
-
-const EMPTY_ENTRIES: JournalEntry[] = [];
-const EMPTY_TRIPS: Trip[] = [];
-
-function parseLocal<T>(raw: string | null, fallback: T): T {
-  if (!raw) return fallback;
-  try { return JSON.parse(raw) ?? fallback; }
-  catch { return fallback; }
-}
-
-function subscribeLocal(key: string, callback: () => void) {
-  if (typeof window === "undefined") return () => {};
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === key) callback();
-  };
-  window.addEventListener("storage", onStorage);
-  return () => window.removeEventListener("storage", onStorage);
-}
-
-function getLocalRaw(key: string) {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(key);
-}
-
-function useLocalJson<T>(key: string, fallback: T): T {
-  const raw = useSyncExternalStore(
-    (callback) => subscribeLocal(key, callback),
-    () => getLocalRaw(key),
-    () => null
-  );
-
-  return useMemo(() => parseLocal(raw, fallback), [raw, fallback]);
-}
 
 function initials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -59,12 +27,39 @@ export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const { favorites, toggleFavorite, visitStatus } = useParkData();
   const router = useRouter();
-  const entries = useLocalJson<JournalEntry[]>("trailquest_journal", EMPTY_ENTRIES);
-  const trips = useLocalJson<Trip[]>("trailquest_trips", EMPTY_TRIPS);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [tab, setTab] = useState<"saved" | "journal" | "trips">("saved");
 
   useEffect(() => {
     if (!user) { router.replace("/auth/signin"); return; }
+
+    supabase.from("journal_entries")
+      .select("id,title,date,park_name,rating")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setEntries(data.map((r) => ({
+          id: r.id as string,
+          title: r.title as string,
+          date: r.date as string,
+          parkName: (r.park_name as string) ?? "",
+          rating: (r.rating as number) ?? 0,
+        })));
+      });
+
+    supabase.from("trips")
+      .select("id,name,start_date,stops")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setTrips(data.map((r) => ({
+          id: r.id as string,
+          name: r.name as string,
+          startDate: (r.start_date as string) ?? "",
+          stops: (r.stops as { parkName: string }[]) ?? [],
+        })));
+      });
   }, [user, router]);
 
   if (!user) return null;

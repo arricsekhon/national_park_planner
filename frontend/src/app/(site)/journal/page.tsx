@@ -2,9 +2,11 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { searchParks, type Park } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/lib/toast";
 
 interface JournalEntry {
   id: string;
@@ -87,6 +89,7 @@ function averageRating(entries: JournalEntry[]): string {
 
 function JournalContent() {
   const { user } = useAuth();
+  const toast = useToast();
   const searchParams = useSearchParams();
   const prefillParkCode = searchParams.get("parkCode") ?? "";
   const prefillParkName = searchParams.get("parkName") ?? "";
@@ -155,7 +158,8 @@ function JournalContent() {
         photos: entry.photos,
         created_at: entry.createdAt,
       }).then(({ error }) => {
-        if (error) console.error("[journal] insert error:", error);
+        if (error) { console.error("[journal] insert error:", error); toast("Failed to save entry", "error"); }
+        else toast("Entry saved");
       });
     } else {
       saveEntries(next);
@@ -167,7 +171,8 @@ function JournalContent() {
     setEntries(next);
     setViewEntry(null);
     if (user) {
-      void supabase.from("journal_entries").delete().eq("id", id).eq("user_id", user.id);
+      supabase.from("journal_entries").delete().eq("id", id).eq("user_id", user.id)
+        .then(({ error }) => { if (error) toast("Failed to delete entry", "error"); else toast("Entry deleted"); });
     } else {
       saveEntries(next);
     }
@@ -190,6 +195,14 @@ function JournalContent() {
 
   return (
     <div className="min-h-screen pt-[66px]" style={{ background: "var(--surface)" }}>
+      {!user && (
+        <div className="mx-auto max-w-[1540px] px-4 pt-4">
+          <div className="flex items-center justify-between gap-4 rounded-xl px-4 py-3 text-sm" style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)", color: "var(--accent)" }}>
+            <span className="font-medium">Sign in to sync your journal across devices.</span>
+            <Link href="/auth/signin" className="font-semibold underline underline-offset-2 shrink-0">Sign in</Link>
+          </div>
+        </div>
+      )}
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside
           className="rounded-lg border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]"

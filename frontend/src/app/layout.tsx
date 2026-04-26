@@ -3,6 +3,7 @@ import { Playfair_Display, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ParkDataProvider } from "@/lib/park-data";
+import { ToastProvider } from "@/lib/toast";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -33,7 +34,9 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col">
         <AuthProvider>
           <ParkDataProvider>
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </ParkDataProvider>
         </AuthProvider>
       </body>

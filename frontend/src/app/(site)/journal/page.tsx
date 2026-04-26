@@ -91,6 +91,7 @@ function JournalContent() {
   const prefillParkCode = searchParams.get("parkCode") ?? "";
   const prefillParkName = searchParams.get("parkName") ?? "";
   const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [loadingEntries, setLoadingEntries] = useState(true);
   const [showForm, setShowForm] = useState(searchParams.get("action") === "new");
   const [viewEntry, setViewEntry] = useState<JournalEntry | null>(null);
   const [query, setQuery] = useState("");
@@ -99,6 +100,7 @@ function JournalContent() {
     if (!user) {
       const loaded = loadEntries();
       setEntries(loaded);
+      setLoadingEntries(false);
       const id = searchParams.get("id");
       if (id) {
         const entry = loaded.find((e) => e.id === id);
@@ -106,15 +108,17 @@ function JournalContent() {
       }
       return;
     }
+    setLoadingEntries(true);
     supabase
       .from("journal_entries")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
-        if (!data) return;
+        if (!data) { setLoadingEntries(false); return; }
         const loaded = data.map((r) => rowToEntry(r as Record<string, unknown>));
         setEntries(loaded);
+        setLoadingEntries(false);
         const id = searchParams.get("id");
         if (id) {
           const entry = loaded.find((e) => e.id === id);
@@ -245,7 +249,16 @@ function JournalContent() {
           </div>
 
           <div className="mt-5 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-330px)]">
-            {entries.length === 0 ? (
+            {loadingEntries ? (
+              <div className="space-y-2 animate-pulse">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="rounded-lg border p-3" style={{ borderColor: "var(--line)", background: "white" }}>
+                    <div className="h-3.5 w-3/4 rounded-full" style={{ background: "var(--linen)" }} />
+                    <div className="mt-2 h-3 w-1/2 rounded-full" style={{ background: "var(--linen)" }} />
+                  </div>
+                ))}
+              </div>
+            ) : entries.length === 0 ? (
               <div className="rounded-lg border border-dashed px-4 py-6 text-center" style={{ borderColor: "var(--line)" }}>
                 <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
                   No memories yet

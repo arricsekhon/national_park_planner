@@ -163,6 +163,8 @@ export default function PlannerPage() {
   const [parkResults, setParkResults] = useState<Park[]>([]);
   const [searching, setSearching] = useState(false);
   const [showChecklist, setShowChecklist] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<"saved" | "error" | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -255,6 +257,36 @@ export default function PlannerPage() {
     } else {
       saveTrips(next);
     }
+  };
+
+  const saveTrip = async () => {
+    if (!activeTrip) return;
+    setSaving(true);
+    if (!user) {
+      saveTrips(trips);
+      setSaving(false);
+      setSaveMsg("saved");
+      setTimeout(() => setSaveMsg(null), 2500);
+      return;
+    }
+    const { error } = await supabase.from("trips").upsert({
+      id: activeTrip.id,
+      user_id: user.id,
+      name: activeTrip.name,
+      start_date: activeTrip.startDate,
+      end_date: activeTrip.endDate,
+      stops: activeTrip.stops,
+      notes: activeTrip.notes,
+      created_at: activeTrip.createdAt,
+    });
+    setSaving(false);
+    if (error) {
+      console.error("[planner] save error:", error);
+      setSaveMsg("error");
+    } else {
+      setSaveMsg("saved");
+    }
+    setTimeout(() => setSaveMsg(null), 2500);
   };
 
   const deleteTrip = (id: string) => {
@@ -479,6 +511,19 @@ export default function PlannerPage() {
 
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     <ShareTripButton trip={activeTrip} />
+                    <button
+                      type="button"
+                      onClick={saveTrip}
+                      disabled={saving}
+                      className="inline-flex items-center gap-2 rounded-lg border border-white/16 px-3 py-2 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-50"
+                      style={{
+                        color: saveMsg === "saved" ? "#86efac" : saveMsg === "error" ? "#f87171" : "rgba(255,255,255,0.78)",
+                        borderColor: saveMsg === "saved" ? "rgba(134,239,172,0.3)" : saveMsg === "error" ? "rgba(248,113,113,0.3)" : "rgba(255,255,255,0.16)",
+                      }}
+                    >
+                      <Icon name="check" className="h-4 w-4" />
+                      {saving ? "Saving…" : saveMsg === "saved" ? "Saved!" : saveMsg === "error" ? "Error" : "Save"}
+                    </button>
                     <button
                       type="button"
                       onClick={() => window.print()}

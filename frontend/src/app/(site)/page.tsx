@@ -97,14 +97,14 @@ export default async function HomePage() {
 
         <div className="premium-shell relative z-10 grid items-center gap-12 pt-20 pb-14 sm:min-h-[100svh] sm:pt-28 sm:pb-24 lg:grid-cols-[minmax(0,1fr)_390px]">
           <div className="max-w-5xl text-center lg:text-left">
-            <div className="animate-hero-1 mb-6 inline-flex items-center gap-3 rounded-lg border border-white/16 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/74 backdrop-blur-xl">
+            <div className="animate-hero-1 mb-6 hidden sm:inline-flex items-center gap-3 rounded-lg border border-white/16 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/74 backdrop-blur-xl">
               <span className="h-1.5 w-1.5 rounded-full bg-[#8ee3d5]" />
               National park trip planning
             </div>
 
             <h1
-              className="animate-hero-2 text-balance font-semibold leading-[0.92]"
-              style={{ fontSize: "clamp(3.25rem, 12vw, 8.75rem)" }}
+              className="animate-hero-2 text-balance font-semibold leading-[1.05] sm:leading-[0.92]"
+              style={{ fontSize: "clamp(1.75rem, 7.5vw, 8.75rem)", overflowWrap: "break-word" }}
             >
               Plan the park trip without the chaos.
             </h1>

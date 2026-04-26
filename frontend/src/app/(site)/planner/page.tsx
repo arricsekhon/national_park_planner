@@ -169,6 +169,7 @@ export default function PlannerPage() {
   const [showChecklist, setShowChecklist] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<"saved" | "error" | null>(null);
+  const [mobileTab, setMobileTab] = useState<"trips" | "editor">("trips");
 
   useEffect(() => {
     if (!user) {
@@ -213,6 +214,11 @@ export default function PlannerPage() {
   }, [user]);
 
   const activeTrip = trips.find((t) => t.id === activeId) ?? null;
+
+  // Auto-switch to editor on mobile when a trip is selected
+  useEffect(() => {
+    if (activeId) setMobileTab("editor");
+  }, [activeId]);
 
   const updateTrip = useCallback((updated: Trip) => {
     setTrips((prev) => {
@@ -377,9 +383,27 @@ export default function PlannerPage() {
           </div>
         </div>
       )}
+      {/* Mobile tab toggle */}
+      <div className="flex lg:hidden border-b" style={{ background: "white", borderColor: "var(--line)" }}>
+        {(["trips", "editor"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setMobileTab(tab)}
+            className="flex-1 py-3.5 text-sm font-semibold relative transition-colors"
+            style={{ color: mobileTab === tab ? "var(--ink)" : "var(--muted)" }}
+          >
+            {tab === "trips" ? `Trips (${trips.length})` : "Editor"}
+            {mobileTab === tab && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full" style={{ background: "var(--accent)" }} />
+            )}
+          </button>
+        ))}
+      </div>
+
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
         <aside
-          className="rounded-lg border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]"
+          className={`${mobileTab === "editor" ? "hidden" : "block"} lg:block rounded-lg border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
           style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)", backdropFilter: "blur(18px)" }}
         >
           <div className="flex items-center justify-between gap-3">
@@ -453,7 +477,7 @@ export default function PlannerPage() {
           </div>
         </aside>
 
-        <main className="min-w-0">
+        <main className={`${mobileTab === "trips" ? "hidden" : "block"} lg:block min-w-0`}>
           {!activeTrip ? (
             <div
               className="flex min-h-[calc(100vh-98px)] flex-col items-center justify-center rounded-lg border bg-white/80 px-6 py-16 text-center"

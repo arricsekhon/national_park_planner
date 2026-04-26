@@ -240,7 +240,8 @@ function ExploreContent() {
           </form>
 
           <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="relative">
+            <div className="flex gap-2 overflow-x-auto pb-1 pr-10">
               {/* Designation toggle */}
               <button
                 onClick={() => setNpOnly((v) => !v)}
@@ -287,6 +288,9 @@ function ExploreContent() {
                   {act}
                 </button>
               ))}
+            </div>
+            {/* Fade hint for horizontal scroll on mobile */}
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:hidden" style={{ background: "linear-gradient(to left, rgba(255,255,255,0.82), transparent)" }} />
             </div>
 
             <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>

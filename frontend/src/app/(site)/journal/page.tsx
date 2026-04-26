@@ -98,6 +98,7 @@ function JournalContent() {
   const [showForm, setShowForm] = useState(searchParams.get("action") === "new");
   const [viewEntry, setViewEntry] = useState<JournalEntry | null>(null);
   const [query, setQuery] = useState("");
+  const [mobileTab, setMobileTab] = useState<"entries" | "browse">("browse");
 
   useEffect(() => {
     if (!user) {
@@ -211,9 +212,27 @@ function JournalContent() {
           </div>
         </div>
       )}
+      {/* Mobile tab toggle */}
+      <div className="flex lg:hidden border-b" style={{ background: "white", borderColor: "var(--line)" }}>
+        {(["browse", "entries"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setMobileTab(tab)}
+            className="flex-1 py-3.5 text-sm font-semibold relative transition-colors"
+            style={{ color: mobileTab === tab ? "var(--ink)" : "var(--muted)" }}
+          >
+            {tab === "browse" ? "Archive" : `Entries (${entries.length})`}
+            {mobileTab === tab && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full" style={{ background: "var(--accent)" }} />
+            )}
+          </button>
+        ))}
+      </div>
+
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside
-          className="rounded-lg border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]"
+          className={`${mobileTab === "browse" ? "hidden" : "block"} lg:block rounded-lg border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
           style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)", backdropFilter: "blur(18px)" }}
         >
           <div className="flex items-start justify-between gap-3">
@@ -309,7 +328,7 @@ function JournalContent() {
           </div>
         </aside>
 
-        <main className="min-w-0">
+        <main className={`${mobileTab === "entries" ? "hidden" : "block"} lg:block min-w-0`}>
           <section
             className="overflow-hidden rounded-lg border p-5 text-white sm:p-6"
             style={{

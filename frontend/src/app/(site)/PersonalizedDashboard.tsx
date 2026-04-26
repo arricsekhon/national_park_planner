@@ -75,7 +75,8 @@ export default function PersonalizedDashboard() {
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:bg-white/10"
                 style={{ color: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.14)" }}
               >
-                + New Journal Entry
+                <span className="sm:hidden">+ Log Visit</span>
+                <span className="hidden sm:inline">+ New Journal Entry</span>
               </Link>
               <Link
                 href="/planner"

@@ -95,7 +95,7 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
           </svg>
           All Parks
         </Link>
-        <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>
             <h1
               className="font-bold text-white leading-tight"
@@ -112,7 +112,7 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
             </p>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto">
             <div
               className="flex items-center gap-0.5 px-1.5 py-1.5 rounded-2xl"
               style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)" }}
@@ -124,7 +124,7 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
                 aria-label={isFav ? "Remove from saved parks" : "Save this park"}
                 aria-pressed={isFav}
                 data-tip={isFav ? "Saved" : "Save park"}
-                className="icon-btn-tooltip p-2.5 rounded-xl transition-all hover:bg-white/10 active:scale-90"
+                className="icon-btn-tooltip p-3 min-w-[44px] min-h-[44px] rounded-xl transition-all hover:bg-white/10 active:scale-90 flex items-center justify-center"
                 style={{ color: isFav ? "#f87171" : "rgba(255,255,255,0.65)" }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={isFav ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -139,7 +139,7 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
                 aria-label={status === "been" ? "Marked as visited — click to change" : status === "want" ? "Marked as want to go — click to change" : "Set visit status"}
                 aria-pressed={status !== "none"}
                 data-tip={status === "been" ? "Been here" : status === "want" ? "Want to go" : "Mark visited"}
-                className="icon-btn-tooltip p-2.5 rounded-xl transition-all hover:bg-white/10 active:scale-90"
+                className="icon-btn-tooltip p-3 min-w-[44px] min-h-[44px] rounded-xl transition-all hover:bg-white/10 active:scale-90 flex items-center justify-center"
                 style={{ color: status === "been" ? "#86efac" : status === "want" ? "#fcd34d" : "rgba(255,255,255,0.65)" }}
               >
                 {status === "been" ? (
@@ -158,7 +158,7 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
                 aria-label={comparing ? "Remove from comparison" : "Add to comparison"}
                 aria-pressed={comparing}
                 data-tip={comparing ? "Remove from compare" : "Add to compare"}
-                className="icon-btn-tooltip p-2.5 rounded-xl transition-all hover:bg-white/10 active:scale-90"
+                className="icon-btn-tooltip p-3 min-w-[44px] min-h-[44px] rounded-xl transition-all hover:bg-white/10 active:scale-90 flex items-center justify-center"
                 style={{ color: comparing ? "#fcd34d" : "rgba(255,255,255,0.65)" }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -172,7 +172,7 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
                 href={`/journal?action=new&parkCode=${parkCode}&parkName=${encodeURIComponent(parkName)}`}
                 aria-label="Write a journal entry for this park"
                 data-tip="Write journal"
-                className="icon-btn-tooltip p-2.5 rounded-xl transition-all hover:bg-white/10 active:scale-90 flex items-center"
+                className="icon-btn-tooltip p-3 min-w-[44px] min-h-[44px] rounded-xl transition-all hover:bg-white/10 active:scale-90 flex items-center justify-center"
                 style={{ color: "rgba(255,255,255,0.65)" }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -183,7 +183,7 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
 
             <button
               onClick={addToPlanner}
-              className="px-5 py-2.5 rounded-2xl text-sm font-bold text-white transition-all active:scale-95 hover:opacity-90"
+              className="flex-1 sm:flex-none px-5 py-3 min-h-[44px] rounded-2xl text-sm font-bold text-white transition-all active:scale-95 hover:opacity-90"
               style={{ background: "var(--amber)", boxShadow: "0 4px 20px rgba(200,134,10,0.45)" }}
             >
               + Add to Trip

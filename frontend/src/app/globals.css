@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+body { overflow-x: clip; }
+
 :root {
   /* Core design tokens */
   --ink: #111315;

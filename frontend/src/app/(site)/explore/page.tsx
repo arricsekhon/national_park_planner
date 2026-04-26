@@ -28,7 +28,7 @@ function ExploreContent() {
   const [stateCode, setStateCode] = useState("");
   const [parks, setParks] = useState<Park[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [selectedPark, setSelectedPark] = useState<string | null>(null);

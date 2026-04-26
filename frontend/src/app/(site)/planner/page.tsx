@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { searchParks, type Park } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 interface TripStop {
   id: string;
@@ -141,7 +143,20 @@ function saveTrips(trips: Trip[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
 }
 
+function rowToTrip(row: Record<string, unknown>): Trip {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    startDate: (row.start_date as string) ?? "",
+    endDate: (row.end_date as string) ?? "",
+    stops: (row.stops as TripStop[]) ?? [],
+    notes: (row.notes as string) ?? "",
+    createdAt: row.created_at as string,
+  };
+}
+
 export default function PlannerPage() {
+  const { user } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [parkSearch, setParkSearch] = useState("");
@@ -150,24 +165,66 @@ export default function PlannerPage() {
   const [showChecklist, setShowChecklist] = useState(true);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    if (!user) {
       const loaded = loadTrips();
       setTrips(loaded);
       setActiveId(loaded[0]?.id ?? null);
-    }, 0);
+      return;
+    }
 
-    return () => window.clearTimeout(timer);
-  }, []);
+    supabase
+      .from("trips")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        let loaded = data ? data.map((r) => rowToTrip(r as Record<string, unknown>)) : [];
+
+        // Migrate any _draft trip from localStorage into Supabase
+        const lsTrips = loadTrips();
+        const draft = lsTrips.find((t) => t.id === "_draft");
+        if (draft) {
+          const migratedDraft: Trip = { ...draft, id: createLocalId("trip") };
+          loaded = [migratedDraft, ...loaded];
+          void supabase.from("trips").insert({
+            id: migratedDraft.id,
+            user_id: user.id,
+            name: migratedDraft.name,
+            start_date: migratedDraft.startDate,
+            end_date: migratedDraft.endDate,
+            stops: migratedDraft.stops,
+            notes: migratedDraft.notes,
+            created_at: migratedDraft.createdAt,
+          });
+          const remaining = lsTrips.filter((t) => t.id !== "_draft");
+          saveTrips(remaining);
+        }
+
+        setTrips(loaded);
+        setActiveId(loaded[0]?.id ?? null);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const activeTrip = trips.find((t) => t.id === activeId) ?? null;
 
   const updateTrip = useCallback((updated: Trip) => {
     setTrips((prev) => {
       const next = prev.map((t) => (t.id === updated.id ? updated : t));
-      saveTrips(next);
+      if (!user) saveTrips(next);
       return next;
     });
-  }, []);
+    if (user) {
+      void supabase.from("trips").update({
+        name: updated.name,
+        start_date: updated.startDate,
+        end_date: updated.endDate,
+        stops: updated.stops,
+        notes: updated.notes,
+      }).eq("id", updated.id).eq("user_id", user.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const newTrip = () => {
     const trip: Trip = {
@@ -181,15 +238,32 @@ export default function PlannerPage() {
     };
     const next = [trip, ...trips];
     setTrips(next);
-    saveTrips(next);
     setActiveId(trip.id);
+    if (user) {
+      void supabase.from("trips").insert({
+        id: trip.id,
+        user_id: user.id,
+        name: trip.name,
+        start_date: trip.startDate,
+        end_date: trip.endDate,
+        stops: trip.stops,
+        notes: trip.notes,
+        created_at: trip.createdAt,
+      });
+    } else {
+      saveTrips(next);
+    }
   };
 
   const deleteTrip = (id: string) => {
     const next = trips.filter((t) => t.id !== id);
     setTrips(next);
-    saveTrips(next);
     setActiveId(next[0]?.id ?? null);
+    if (user) {
+      void supabase.from("trips").delete().eq("id", id).eq("user_id", user.id);
+    } else {
+      saveTrips(next);
+    }
   };
 
   const searchIdRef = useRef(0);

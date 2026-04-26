@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { searchParks, type Park } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 interface JournalEntry {
   id: string;
@@ -49,6 +51,20 @@ function createLocalId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}`;
 }
 
+function rowToEntry(row: Record<string, unknown>): JournalEntry {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    date: row.date as string,
+    parkCode: row.park_code as string,
+    parkName: row.park_name as string,
+    rating: row.rating as number,
+    notes: (row.notes as string) ?? "",
+    photos: (row.photos as string[]) ?? [],
+    createdAt: row.created_at as string,
+  };
+}
+
 function todayInputValue(): string {
   return new Date().toISOString().split("T")[0];
 }
@@ -70,6 +86,7 @@ function averageRating(entries: JournalEntry[]): string {
 }
 
 function JournalContent() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const prefillParkCode = searchParams.get("parkCode") ?? "";
   const prefillParkName = searchParams.get("parkName") ?? "";
@@ -79,15 +96,33 @@ function JournalContent() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    const loaded = loadEntries();
-    setEntries(loaded);
-    const id = searchParams.get("id");
-    if (id) {
-      const entry = loaded.find((e) => e.id === id);
-      if (entry) setViewEntry(entry);
+    if (!user) {
+      const loaded = loadEntries();
+      setEntries(loaded);
+      const id = searchParams.get("id");
+      if (id) {
+        const entry = loaded.find((e) => e.id === id);
+        if (entry) setViewEntry(entry);
+      }
+      return;
     }
+    supabase
+      .from("journal_entries")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (!data) return;
+        const loaded = data.map((r) => rowToEntry(r as Record<string, unknown>));
+        setEntries(loaded);
+        const id = searchParams.get("id");
+        if (id) {
+          const entry = loaded.find((e) => e.id === id);
+          if (entry) setViewEntry(entry);
+        }
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   const filteredEntries = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -102,15 +137,34 @@ function JournalContent() {
   const addEntry = (entry: JournalEntry) => {
     const next = [entry, ...entries];
     setEntries(next);
-    saveEntries(next);
     setShowForm(false);
+    if (user) {
+      void supabase.from("journal_entries").insert({
+        id: entry.id,
+        user_id: user.id,
+        title: entry.title,
+        date: entry.date,
+        park_code: entry.parkCode,
+        park_name: entry.parkName,
+        rating: entry.rating,
+        notes: entry.notes,
+        photos: entry.photos,
+        created_at: entry.createdAt,
+      });
+    } else {
+      saveEntries(next);
+    }
   };
 
   const deleteEntry = (id: string) => {
     const next = entries.filter((entry) => entry.id !== id);
     setEntries(next);
-    saveEntries(next);
     setViewEntry(null);
+    if (user) {
+      void supabase.from("journal_entries").delete().eq("id", id).eq("user_id", user.id);
+    } else {
+      saveEntries(next);
+    }
   };
 
   if (viewEntry) {

@@ -1,15 +1,13 @@
 "use client";
 
-import { createContext, useContext, useCallback, useMemo, useSyncExternalStore } from "react";
+import { createContext, useContext, useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "./auth";
+import { supabase } from "./supabase";
 
-const FAV_KEY = "trailquest_favorites";
-const VISIT_KEY = "trailquest_visit_status";
 const COMPARE_KEY = "trailquest_compare";
-const RATINGS_KEY = "trailquest_ratings";
-const EMPTY_FAVORITES: FavoritePark[] = [];
-const EMPTY_VISIT_STATUS: Record<string, "want" | "been"> = {};
-const EMPTY_COMPARE_LIST: ComparePark[] = [];
-const EMPTY_RATINGS: Record<string, ParkRating> = {};
+const FAV_LS = "trailquest_favorites";
+const VISIT_LS = "trailquest_visit_status";
+const RATINGS_LS = "trailquest_ratings";
 
 export interface FavoritePark {
   code: string;
@@ -47,115 +45,147 @@ interface ParkDataCtx {
 
 const ParkDataContext = createContext<ParkDataCtx | null>(null);
 
-function load<T>(key: string, fallback: T): T {
+function lsLoad<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; }
   catch { return fallback; }
 }
 
-function subscribeToStorage(key: string, callback: () => void) {
-  if (typeof window === "undefined") return () => {};
-
-  const localEvent = `trailquest-storage:${key}`;
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === key) callback();
-  };
-
-  window.addEventListener("storage", onStorage);
-  window.addEventListener(localEvent, callback);
-
-  return () => {
-    window.removeEventListener("storage", onStorage);
-    window.removeEventListener(localEvent, callback);
-  };
-}
-
-function getStoredRaw(key: string) {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(key);
-}
-
-function notifyStorageChange(key: string) {
-  window.dispatchEvent(new Event(`trailquest-storage:${key}`));
-}
-
-function save<T>(key: string, value: T) {
+function lsSave<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(key, JSON.stringify(value));
-  notifyStorageChange(key);
-}
-
-function remove(key: string) {
-  localStorage.removeItem(key);
-  notifyStorageChange(key);
-}
-
-function useStoredJson<T>(key: string, fallback: T): T {
-  const raw = useSyncExternalStore(
-    (callback) => subscribeToStorage(key, callback),
-    () => getStoredRaw(key),
-    () => null
-  );
-
-  return useMemo(() => {
-    if (!raw) return fallback;
-    try {
-      return JSON.parse(raw) ?? fallback;
-    } catch {
-      return fallback;
-    }
-  }, [raw, fallback]);
 }
 
 export function ParkDataProvider({ children }: { children: React.ReactNode }) {
-  const favorites = useStoredJson<FavoritePark[]>(FAV_KEY, EMPTY_FAVORITES);
-  const visitStatus = useStoredJson<Record<string, "want" | "been">>(VISIT_KEY, EMPTY_VISIT_STATUS);
-  const compareList = useStoredJson<ComparePark[]>(COMPARE_KEY, EMPTY_COMPARE_LIST);
-  const ratings = useStoredJson<Record<string, ParkRating>>(RATINGS_KEY, EMPTY_RATINGS);
+  const { user, loading: authLoading } = useAuth();
+  const [favorites, setFavorites] = useState<FavoritePark[]>([]);
+  const [visitStatus, setVisitStatusMap] = useState<Record<string, "want" | "been">>({});
+  const [compareList, setCompareList] = useState<ComparePark[]>([]);
+  const [ratings, setRatingsMap] = useState<Record<string, ParkRating>>({});
+
+  useEffect(() => {
+    setCompareList(lsLoad<ComparePark[]>(COMPARE_KEY, []));
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      setFavorites(lsLoad<FavoritePark[]>(FAV_LS, []));
+      setVisitStatusMap(lsLoad<Record<string, "want" | "been">>(VISIT_LS, {}));
+      setRatingsMap(lsLoad<Record<string, ParkRating>>(RATINGS_LS, {}));
+      return;
+    }
+
+    void Promise.all([
+      supabase.from("favorites").select("park_code,park_name,park_states,image_url").eq("user_id", user.id),
+      supabase.from("visit_status").select("park_code,status").eq("user_id", user.id),
+      supabase.from("park_ratings").select("park_code,stars,review,date").eq("user_id", user.id),
+    ]).then(([{ data: favs }, { data: visits }, { data: rats }]) => {
+      if (favs) {
+        setFavorites(favs.map((f) => ({
+          code: f.park_code as string,
+          name: f.park_name as string,
+          states: (f.park_states as string) ?? "",
+          imageUrl: (f.image_url as string | null) ?? undefined,
+        })));
+      }
+      if (visits) {
+        const m: Record<string, "want" | "been"> = {};
+        visits.forEach((v) => { m[v.park_code as string] = v.status as "want" | "been"; });
+        setVisitStatusMap(m);
+      }
+      if (rats) {
+        const m: Record<string, ParkRating> = {};
+        rats.forEach((r) => {
+          m[r.park_code as string] = {
+            stars: r.stars as number,
+            review: (r.review as string) ?? "",
+            date: (r.date as string) ?? "",
+          };
+        });
+        setRatingsMap(m);
+      }
+    });
+  }, [user, authLoading]);
 
   const toggleFavorite = useCallback((park: FavoritePark) => {
-    const current = load<FavoritePark[]>(FAV_KEY, []);
-    const exists = current.some((f) => f.code === park.code);
-    const next = exists ? current.filter((f) => f.code !== park.code) : [...current, park];
-    save(FAV_KEY, next);
-  }, []);
+    const exists = favorites.some((f) => f.code === park.code);
+    const next = exists ? favorites.filter((f) => f.code !== park.code) : [...favorites, park];
+    setFavorites(next);
+
+    if (!user) { lsSave(FAV_LS, next); return; }
+    if (exists) {
+      void supabase.from("favorites").delete().eq("user_id", user.id).eq("park_code", park.code);
+    } else {
+      void supabase.from("favorites").insert({
+        user_id: user.id,
+        park_code: park.code,
+        park_name: park.name,
+        park_states: park.states,
+        image_url: park.imageUrl ?? null,
+      });
+    }
+  }, [favorites, user]);
 
   const isFavorite = useCallback((code: string) => favorites.some((f) => f.code === code), [favorites]);
 
   const setVisitStatus = useCallback((code: string, status: "none" | "want" | "been") => {
-    const next = { ...load<Record<string, "want" | "been">>(VISIT_KEY, {}) };
+    const next = { ...visitStatus };
     if (status === "none") delete next[code];
     else next[code] = status;
-    save(VISIT_KEY, next);
-  }, []);
+    setVisitStatusMap(next);
+
+    if (!user) { lsSave(VISIT_LS, next); return; }
+    if (status === "none") {
+      void supabase.from("visit_status").delete().eq("user_id", user.id).eq("park_code", code);
+    } else {
+      void supabase.from("visit_status").upsert(
+        { user_id: user.id, park_code: code, status },
+        { onConflict: "user_id,park_code" }
+      );
+    }
+  }, [visitStatus, user]);
 
   const getVisitStatus = useCallback((code: string): "none" | "want" | "been" => visitStatus[code] ?? "none", [visitStatus]);
 
   const toggleCompare = useCallback((park: ComparePark) => {
-    const current = load<ComparePark[]>(COMPARE_KEY, []);
-    const exists = current.some((p) => p.code === park.code);
+    const exists = compareList.some((p) => p.code === park.code);
     let next: ComparePark[];
     if (exists) {
-      next = current.filter((p) => p.code !== park.code);
-    } else if (current.length >= 3) {
+      next = compareList.filter((p) => p.code !== park.code);
+    } else if (compareList.length >= 3) {
       return;
     } else {
-      next = [...current, park];
+      next = [...compareList, park];
     }
-    save(COMPARE_KEY, next);
-  }, []);
+    setCompareList(next);
+    lsSave(COMPARE_KEY, next);
+  }, [compareList]);
 
   const inCompare = useCallback((code: string) => compareList.some((p) => p.code === code), [compareList]);
 
   const clearCompare = useCallback(() => {
-    remove(COMPARE_KEY);
+    setCompareList([]);
+    lsSave(COMPARE_KEY, []);
   }, []);
 
   const setRating = useCallback((code: string, rating: ParkRating | null) => {
-    const next = { ...load<Record<string, ParkRating>>(RATINGS_KEY, {}) };
+    const next = { ...ratings };
     if (rating === null) delete next[code];
     else next[code] = rating;
-    save(RATINGS_KEY, next);
-  }, []);
+    setRatingsMap(next);
+
+    if (!user) { lsSave(RATINGS_LS, next); return; }
+    if (rating === null) {
+      void supabase.from("park_ratings").delete().eq("user_id", user.id).eq("park_code", code);
+    } else {
+      void supabase.from("park_ratings").upsert(
+        { user_id: user.id, park_code: code, stars: rating.stars, review: rating.review, date: rating.date },
+        { onConflict: "user_id,park_code" }
+      );
+    }
+  }, [ratings, user]);
 
   const getRating = useCallback((code: string): ParkRating | null => ratings[code] ?? null, [ratings]);
 
@@ -167,27 +197,14 @@ export function ParkDataProvider({ children }: { children: React.ReactNode }) {
       ratings, setRating, getRating,
     }),
     [
-      favorites,
-      toggleFavorite,
-      isFavorite,
-      visitStatus,
-      setVisitStatus,
-      getVisitStatus,
-      compareList,
-      toggleCompare,
-      inCompare,
-      clearCompare,
-      ratings,
-      setRating,
-      getRating,
+      favorites, toggleFavorite, isFavorite,
+      visitStatus, setVisitStatus, getVisitStatus,
+      compareList, toggleCompare, inCompare, clearCompare,
+      ratings, setRating, getRating,
     ]
   );
 
-  return (
-    <ParkDataContext.Provider value={value}>
-      {children}
-    </ParkDataContext.Provider>
-  );
+  return <ParkDataContext.Provider value={value}>{children}</ParkDataContext.Provider>;
 }
 
 export function useParkData() {

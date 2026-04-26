@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useCallback, useMemo, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import { supabase } from "./supabase";
 
 export interface User {
   id: string;
@@ -19,89 +20,48 @@ interface AuthCtx {
 
 const AuthContext = createContext<AuthCtx | null>(null);
 
-// Demo-only browser auth. This keeps the prototype self-contained; replace it
-// with server-issued sessions before handling real users or real passwords.
-const USERS_KEY = "trailquest_users";
-const SESSION_KEY = "trailquest_session";
-
-function getUsers(): Record<string, { id: string; name: string; email: string; passwordHash: string }> {
-  if (typeof window === "undefined") return {};
-  try { return JSON.parse(localStorage.getItem(USERS_KEY) ?? "{}"); }
-  catch { return {}; }
-}
-
-function subscribeToSession(callback: () => void) {
-  if (typeof window === "undefined") return () => {};
-
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === SESSION_KEY) callback();
+function mapUser(sbUser: { id: string; email?: string; user_metadata: Record<string, unknown> }): User {
+  return {
+    id: sbUser.id,
+    email: sbUser.email ?? "",
+    name: (sbUser.user_metadata?.name as string | undefined) || sbUser.email?.split("@")[0] || "User",
+    avatar: sbUser.user_metadata?.avatar_url as string | undefined,
   };
-
-  window.addEventListener("storage", onStorage);
-  window.addEventListener("trailquest-session", callback);
-
-  return () => {
-    window.removeEventListener("storage", onStorage);
-    window.removeEventListener("trailquest-session", callback);
-  };
-}
-
-function getSessionRaw() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(SESSION_KEY);
-}
-
-function notifySessionChange() {
-  window.dispatchEvent(new Event("trailquest-session"));
-}
-
-async function hashPassword(password: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(password));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function createUserId() {
-  return crypto.randomUUID();
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const sessionRaw = useSyncExternalStore(subscribeToSession, getSessionRaw, () => null);
-  const user = useMemo<User | null>(() => {
-    try {
-      return sessionRaw ? JSON.parse(sessionRaw) : null;
-    } catch {
-      return null;
-    }
-  }, [sessionRaw]);
-  const loading = false;
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ? mapUser(session.user) : null);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ? mapUser(session.user) : null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const signUp = useCallback(async (name: string, email: string, password: string) => {
-    const users = getUsers();
-    const key = email.trim().toLowerCase();
-    if (users[key]) throw new Error("An account with this email already exists.");
-    const newUser = { id: createUserId(), name, email: key, passwordHash: await hashPassword(password) };
-    users[key] = newUser;
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    const session: User = { id: newUser.id, name: newUser.name, email: newUser.email };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    notifySessionChange();
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
+    });
+    if (error) throw new Error(error.message);
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const users = getUsers();
-    const key = email.trim().toLowerCase();
-    const found = users[key];
-    if (!found || found.passwordHash !== await hashPassword(password)) {
-      throw new Error("Incorrect email or password.");
-    }
-    const session: User = { id: found.id, name: found.name, email: found.email };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    notifySessionChange();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
   }, []);
 
   const signOut = useCallback(() => {
-    localStorage.removeItem(SESSION_KEY);
-    notifySessionChange();
+    void supabase.auth.signOut();
   }, []);
 
   const value = useMemo(
@@ -109,11 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, loading, signUp, signIn, signOut]
   );
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

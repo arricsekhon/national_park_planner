@@ -240,7 +240,7 @@ export default function PlannerPage() {
     setTrips(next);
     setActiveId(trip.id);
     if (user) {
-      void supabase.from("trips").insert({
+      supabase.from("trips").insert({
         id: trip.id,
         user_id: user.id,
         name: trip.name,
@@ -249,6 +249,8 @@ export default function PlannerPage() {
         stops: trip.stops,
         notes: trip.notes,
         created_at: trip.createdAt,
+      }).then(({ error }) => {
+        if (error) console.error("[planner] insert error:", error);
       });
     } else {
       saveTrips(next);

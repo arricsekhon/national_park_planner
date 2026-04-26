@@ -139,7 +139,7 @@ function JournalContent() {
     setEntries(next);
     setShowForm(false);
     if (user) {
-      void supabase.from("journal_entries").insert({
+      supabase.from("journal_entries").insert({
         id: entry.id,
         user_id: user.id,
         title: entry.title,
@@ -150,6 +150,8 @@ function JournalContent() {
         notes: entry.notes,
         photos: entry.photos,
         created_at: entry.createdAt,
+      }).then(({ error }) => {
+        if (error) console.error("[journal] insert error:", error);
       });
     } else {
       saveEntries(next);

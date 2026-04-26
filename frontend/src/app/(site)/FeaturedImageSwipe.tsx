@@ -2,12 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { Park } from "@/lib/api";
 
 export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
   const [active, setActive] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [mouseStartX, setMouseStartX] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const didDragRef = useRef(false);
 
   const goNext = () => setActive((index) => (index + 1) % parks.length);
   const goPrev = () => setActive((index) => (index - 1 + parks.length) % parks.length);
@@ -18,6 +21,26 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
     const delta = touchStartX - e.changedTouches[0].clientX;
     if (Math.abs(delta) > 40) delta > 0 ? goNext() : goPrev();
     setTouchStartX(null);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setMouseStartX(e.clientX);
+    setDragging(false);
+    didDragRef.current = false;
+  };
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (mouseStartX === null) return;
+    if (Math.abs(e.clientX - mouseStartX) > 6) setDragging(true);
+  };
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (mouseStartX === null) return;
+    const delta = mouseStartX - e.clientX;
+    if (Math.abs(delta) > 40) { delta > 0 ? goNext() : goPrev(); didDragRef.current = true; }
+    setMouseStartX(null);
+    setDragging(false);
+  };
+  const handleClickCapture = (e: React.MouseEvent) => {
+    if (didDragRef.current) { e.preventDefault(); e.stopPropagation(); didDragRef.current = false; }
   };
 
   if (parks.length === 0) {
@@ -38,10 +61,15 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
   return (
     <div>
       <div
-        className="relative overflow-hidden rounded-xl border"
+        className={`relative overflow-hidden rounded-xl border select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
         style={{ borderColor: "rgba(255,255,255,0.72)", background: "var(--surface-soft)", boxShadow: "0 36px 110px rgba(17,19,21,0.16)" }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={() => { setMouseStartX(null); setDragging(false); }}
+        onClickCapture={handleClickCapture}
       >
         <div
           className="flex transition-transform duration-700 ease-out"
@@ -101,24 +129,6 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
           })}
         </div>
 
-        <div className="absolute bottom-6 right-6 z-20 flex gap-3">
-          <button
-            type="button"
-            onClick={goPrev}
-            aria-label="Previous destination image"
-            className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/22 bg-white/16 text-xl font-semibold text-white backdrop-blur-xl transition-all hover:bg-white/24 active:scale-95 sm:h-14 sm:w-14"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            onClick={goNext}
-            aria-label="Next destination image"
-            className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-xl font-semibold text-[var(--ink)] backdrop-blur-xl transition-all hover:scale-105 active:scale-95 sm:h-14 sm:w-14"
-          >
-            →
-          </button>
-        </div>
       </div>
 
       <div className="mt-6 flex flex-col justify-between gap-5 md:flex-row md:items-center">

@@ -169,8 +169,8 @@ function ExploreContent() {
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="mt-3 grid gap-2.5 grid-cols-2 sm:mt-6 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_210px_auto]">
-            <div className="relative col-span-2 lg:col-span-1">
+          <form onSubmit={handleSearch} className="mt-3 flex flex-col gap-2.5 sm:mt-6 sm:gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_210px_auto]">
+            <div className="relative">
               <input
                 type="text"
                 value={query}
@@ -201,24 +201,27 @@ function ExploreContent() {
               )}
             </div>
 
-            <select
-              value={stateCode}
-              onChange={(e) => setStateCode(e.target.value)}
-              className="col-span-1 min-h-12 sm:min-h-14 rounded-full border px-4 text-sm font-semibold shadow-none"
-              style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
-            >
-              {US_STATES.map(([code, name]) => (
-                <option key={code} value={code}>{name}</option>
-              ))}
-            </select>
+            {/* On mobile: flex row — select gets most space, button gets minimum. On lg: contents → grid children. */}
+            <div className="flex gap-2.5 lg:contents">
+              <select
+                value={stateCode}
+                onChange={(e) => setStateCode(e.target.value)}
+                className="min-w-0 flex-1 min-h-12 rounded-full border px-4 text-sm font-semibold shadow-none sm:min-h-14"
+                style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
+              >
+                {US_STATES.map(([code, name]) => (
+                  <option key={code} value={code}>{name}</option>
+                ))}
+              </select>
 
-            <button
-              type="submit"
-              className="col-span-1 min-h-12 sm:min-h-14 rounded-full px-4 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-95"
-              style={{ background: "var(--ink)", boxShadow: "0 14px 34px rgba(17,19,21,0.16)" }}
-            >
-              Search
-            </button>
+              <button
+                type="submit"
+                className="shrink-0 min-h-12 rounded-full px-6 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-95 sm:min-h-14"
+                style={{ background: "var(--ink)", boxShadow: "0 14px 34px rgba(17,19,21,0.16)" }}
+              >
+                Search
+              </button>
+            </div>
           </form>
 
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">

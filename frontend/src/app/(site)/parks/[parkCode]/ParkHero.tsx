@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useParkData } from "@/lib/park-data";
+import PhotoLightbox from "./PhotoLightbox";
 
 interface Photo {
   url: string;
@@ -21,6 +22,7 @@ interface Props {
 
 export default function ParkHero({ photos, parkCode, parkName, parkStates, location }: Props) {
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const router = useRouter();
   const { toggleFavorite, isFavorite, getVisitStatus, setVisitStatus, toggleCompare, inCompare } = useParkData();
 
@@ -43,8 +45,13 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
 
   return (
     <div
-      className="relative overflow-hidden"
+      className="relative overflow-hidden cursor-zoom-in"
       style={{ height: "clamp(340px, 52vh, 520px)", background: "#121819" }}
+      onClick={() => photos.length > 0 && setLightboxIdx(photoIdx)}
+      role="button"
+      aria-label="Open photo viewer"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && photos.length > 0 && setLightboxIdx(photoIdx)}
     >
       {photos.length > 0 && (
         <Image
@@ -62,12 +69,22 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
         style={{ background: "linear-gradient(to top, rgba(5,15,8,0.95) 0%, rgba(5,15,8,0.45) 45%, rgba(5,15,8,0.15) 100%)" }}
       />
 
+      {/* Expand hint */}
+      {photos.length > 0 && (
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 rounded-lg border border-white/16 bg-black/36 px-2.5 py-1.5 text-[10px] font-semibold text-white/70 backdrop-blur-xl pointer-events-none">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+          </svg>
+          View photos
+        </div>
+      )}
+
       {photos.length > 1 && (
-        <div className="absolute top-20 right-4 flex flex-col gap-1.5">
+        <div className="absolute top-20 right-4 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
           {photos.slice(0, 5).map((photo, i) => (
             <button
               key={i}
-              onClick={() => setPhotoIdx(i)}
+              onClick={() => { setPhotoIdx(i); setLightboxIdx(i); }}
               aria-label={`View photo ${i + 1}`}
               className="overflow-hidden rounded-lg transition-all duration-200"
               style={{
@@ -84,7 +101,7 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 px-6 py-6 max-w-7xl mx-auto">
+      <div className="absolute bottom-0 left-0 right-0 px-6 py-6 max-w-7xl mx-auto" onClick={(e) => e.stopPropagation()}>
         <Link
           href="/explore"
           className="inline-flex items-center gap-1.5 text-xs font-semibold mb-3 transition-opacity hover:opacity-75 uppercase tracking-wider"
@@ -192,5 +209,14 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
         </div>
       </div>
     </div>
+
+    {lightboxIdx !== null && (
+      <PhotoLightbox
+        photos={photos}
+        index={lightboxIdx}
+        onClose={() => setLightboxIdx(null)}
+        onNavigate={(i) => { setLightboxIdx(i); setPhotoIdx(i); }}
+      />
+    )}
   );
 }

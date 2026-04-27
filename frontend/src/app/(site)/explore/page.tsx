@@ -36,6 +36,7 @@ function ExploreContent() {
   const [npOnly, setNpOnly] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [nearMeLoading, setNearMeLoading] = useState(false);
+  const [nearMeError, setNearMeError] = useState("");
   const requestIdRef = useRef(0);
 
   const fetchParks = useCallback(async (q: string, state: string, limit = 50) => {
@@ -114,8 +115,17 @@ function ExploreContent() {
   }, [parks, activityFilter, npOnly, userLocation]);
 
   const handleNearMe = () => {
-    if (!navigator.geolocation) return;
+    if (userLocation) {
+      setUserLocation(null);
+      return;
+    }
+    if (!navigator.geolocation) {
+      setNearMeError("Geolocation is not supported by your browser.");
+      setTimeout(() => setNearMeError(""), 4000);
+      return;
+    }
     setNearMeLoading(true);
+    setNearMeError("");
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
@@ -128,7 +138,8 @@ function ExploreContent() {
       },
       () => {
         setNearMeLoading(false);
-        setError("Location access was denied. Enable location access or search by state instead.");
+        setNearMeError("Location access denied. Try searching by state.");
+        setTimeout(() => setNearMeError(""), 4000);
       }
     );
   };
@@ -244,12 +255,16 @@ function ExploreContent() {
                     <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3"/>
                     <path d="M12 3a9 9 0 019 9"/>
                   </svg>
+                ) : userLocation ? (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                    <path d="M18 6 6 18M6 6l12 12"/>
+                  </svg>
                 ) : (
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                     <path d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z"/><circle cx="12" cy="9" r="2.5"/>
                   </svg>
                 )}
-                {userLocation ? "Near me" : "Near me"}
+                {userLocation ? "Clear location" : "Near me"}
               </button>
 
               <span className="w-px self-stretch mx-1" style={{ background: "var(--line)" }} aria-hidden="true" />
@@ -304,6 +319,9 @@ function ExploreContent() {
             {/* Fade hint for horizontal scroll on mobile */}
             <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:hidden" style={{ background: "linear-gradient(to left, rgba(255,255,255,0.82), transparent)" }} />
             </div>
+            {nearMeError && (
+              <p className="mt-1.5 text-xs font-medium" style={{ color: "#dc2626" }}>{nearMeError}</p>
+            )}
 
             <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
               {loading ? "Searching..." : resultText}
@@ -345,9 +363,24 @@ function ExploreContent() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {displayParks.length === 0 && (
-                    <div className="rounded-[1.6rem] border px-6 py-12 text-center md:col-span-2 xl:col-span-3 2xl:col-span-4" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.7)" }}>
-                      <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>No parks match this filter.</p>
-                      <p className="mt-2 text-sm" style={{ color: "var(--muted)" }}>Try a broader search or clear the activity filter.</p>
+                    <div className="rounded-[1.6rem] border px-6 py-16 text-center md:col-span-2 xl:col-span-3 2xl:col-span-4" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.7)" }}>
+                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "var(--surface-soft)" }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/>
+                        </svg>
+                      </div>
+                      <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>No parks found</p>
+                      <p className="mt-2 max-w-xs mx-auto text-sm leading-6" style={{ color: "var(--muted)" }}>
+                        Try a different keyword, change the state, or clear the activity filter.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setActivityFilter(""); setNpOnly(false); setQuery(""); setStateCode(""); }}
+                        className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
+                        style={{ background: "var(--ink)" }}
+                      >
+                        Clear all filters
+                      </button>
                     </div>
                   )}
                   {displayParks.map((park) => {

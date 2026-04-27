@@ -432,12 +432,15 @@ export default function PlannerPage() {
 
           <div className="mt-5 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-220px)]">
             {trips.length === 0 && (
-              <div className="rounded-lg border border-dashed px-4 py-6 text-center" style={{ borderColor: "var(--line)" }}>
-                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
-                  No trips yet
-                </p>
-                <p className="mt-1 text-sm leading-6" style={{ color: "var(--muted)" }}>
-                  Create a trip to start planning.
+              <div className="rounded-xl border border-dashed px-4 py-8 text-center" style={{ borderColor: "var(--line)" }}>
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M12 19h3a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h3"/>
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>No trips yet</p>
+                <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>
+                  Hit + to start your first route.
                 </p>
               </div>
             )}

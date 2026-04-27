@@ -81,8 +81,8 @@ export default function Nav() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
-  const transparent = false;
-  const onHero = false;
+  const transparent = isHome && !scrolled;
+  const onHero = transparent;
 
   const handleSignOut = () => {
     signOut();

@@ -257,19 +257,18 @@ export default async function HomePage() {
             <p className="mt-6 text-base leading-8" style={{ color: "var(--muted)" }}>
               Begin with the kind of day you want. The interface stays calm while the park data does the heavy lifting.
             </p>
-            <div className="mt-8 flex flex-wrap gap-2.5">
-              {ACTIVITY_DISCOVERY.map(({ label, q }, index) => (
-                <AnimatedSection key={q} direction="up" delay={index * 60}>
+            <AnimatedSection direction="up" delay={100} className="mt-8 flex flex-wrap gap-2.5">
+              {ACTIVITY_DISCOVERY.map(({ label, q }) => (
                 <Link
+                  key={q}
                   href={`/explore?q=${q}`}
                   className="rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:bg-white"
                   style={{ borderColor: "var(--line)", color: "var(--ink)", background: "rgba(255,255,255,0.56)" }}
                 >
                   {label}
                 </Link>
-                </AnimatedSection>
               ))}
-            </div>
+            </AnimatedSection>
           </div>
           </AnimatedSection>
         </div>

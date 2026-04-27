@@ -126,7 +126,7 @@ export default function Nav() {
     <nav
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
       style={{
-        background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,0.28), transparent)" : "rgba(251,251,248,0.78)",
+        background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,0.28), transparent)" : "rgba(251,251,248,0.96)",
         backdropFilter: transparent ? "none" : "blur(24px) saturate(160%)",
         borderBottom: transparent ? "1px solid transparent" : "1px solid rgba(17,19,21,0.08)",
         boxShadow: transparent ? "none" : "0 10px 40px rgba(17,19,21,0.06)",

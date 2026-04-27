@@ -33,8 +33,8 @@ export function HeroSearchAndStats({ parkCount: _ }: { parkCount?: number }) {
         />
         <button
           type="submit"
-          className="shrink-0 min-h-11 rounded-xl px-5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
-          style={{ background: "var(--accent)" }}
+          className="shrink-0 min-h-11 rounded-xl px-5 text-sm font-semibold transition-all hover:opacity-90 active:scale-95"
+          style={{ background: "white", color: "var(--ink)" }}
         >
           Search
         </button>

@@ -1,8 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 const SYSTEM_PROMPT = `You are an expert national park trip planner. Given a list of parks, travel dates, and trip length, generate a practical day-by-day itinerary.
 
 Rules:
@@ -28,6 +26,12 @@ Return this exact shape:
 }`;
 
 export async function POST(req: NextRequest) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ error: "ANTHROPIC_API_KEY is not configured." }, { status: 500 });
+  }
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
   try {
     const { tripName, startDate, endDate, tripDays, stops } = await req.json() as {
       tripName: string;

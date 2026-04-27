@@ -449,7 +449,7 @@ function ParkListCard({
                 </span>
               )}
               {distance !== null && (
-                <span className="rounded-full border border-white/22 bg-white/18 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-xl">
+                <span className="rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-xl">
                   {distance < 10 ? distance.toFixed(1) : Math.round(distance)} mi
                 </span>
               )}

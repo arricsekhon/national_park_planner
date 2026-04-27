@@ -57,20 +57,6 @@ export function HeroSearchAndStats({ parkCount: _ }: { parkCount?: number }) {
         </div>
       </div>
 
-      <div className="animate-hero-4 mt-6 flex flex-wrap gap-2.5 lg:justify-start">
-        <Link
-          href="/planner"
-          className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-6 text-sm font-semibold text-[var(--ink)] transition-all hover:opacity-90 active:scale-95"
-        >
-          Build a trip
-        </Link>
-        <Link
-          href="/explore?q=hiking"
-          className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/25 bg-white/10 px-6 text-sm font-semibold text-white/85 transition-all hover:bg-white/18 active:scale-95"
-        >
-          Browse hikes
-        </Link>
-      </div>
     </>
   );
 }

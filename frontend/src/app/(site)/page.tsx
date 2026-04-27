@@ -73,24 +73,19 @@ async function getFeaturedParks(): Promise<{ parks: Park[]; total: number }> {
 
 export default async function HomePage() {
   const { parks: featured, total: parkTotal } = await getFeaturedParks();
-  const heroImage = featured.find((park) => park.images?.[0])?.images?.[0] ?? null;
   const featureImage = featured[1]?.images?.[0] ?? featured[0]?.images?.[0];
 
   return (
     <main className="min-h-screen overflow-hidden" style={{ background: "var(--surface)" }}>
       <section className="relative min-h-[55svh] overflow-hidden text-white sm:min-h-[100svh]">
-        {heroImage ? (
-          <Image
-            src={heroImage.url}
-            alt={heroImage.altText || "National park landscape"}
-            fill
-            className="object-cover"
-            sizes="100vw"
-            priority
-          />
-        ) : (
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,#111315_0%,#203438_46%,#176d65_100%)]" />
-        )}
+        <Image
+          src="/hero.jpg"
+          alt="Grand Prismatic Spring, Yellowstone National Park"
+          fill
+          className="object-cover object-center"
+          sizes="100vw"
+          priority
+        />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.68)_0%,rgba(0,0,0,0.36)_44%,rgba(0,0,0,0.18)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.16)_46%,rgba(0,0,0,0.78)_100%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_16%,rgba(255,255,255,0.24),transparent_24rem)]" />

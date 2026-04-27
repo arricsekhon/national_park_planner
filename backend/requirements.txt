@@ -1,5 +1,5 @@
 annotated-doc==0.0.4
-slowapi==0.5.7
+slowapi==0.1.9
 limits==3.14.0
 annotated-types==0.7.0
 anyio==4.13.0

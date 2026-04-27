@@ -444,17 +444,17 @@ function ParkListCard({
           <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
             <div className="flex flex-col gap-1.5">
               {park.designation && (
-                <span className="rounded-full border border-white/18 bg-black/24 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-xl leading-tight">
+                <span className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-white leading-tight" style={{ background: "rgba(0,0,0,0.55)" }}>
                   {park.designation}
                 </span>
               )}
               {distance !== null && (
-                <span className="rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-xl">
+                <span className="rounded-full px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>
                   {distance < 10 ? distance.toFixed(1) : Math.round(distance)} mi
                 </span>
               )}
             </div>
-            <span className="rounded-full border border-white/22 bg-black/24 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-xl">
+            <span className="rounded-full px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>
               {park.states}
             </span>
           </div>

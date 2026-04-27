@@ -442,19 +442,19 @@ function ParkListCard({
           )}
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.1)_48%,rgba(0,0,0,0.52)_100%)]" />
           <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col items-start gap-1.5">
               {park.designation && (
-                <span className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-white leading-tight" style={{ background: "rgba(0,0,0,0.55)" }}>
+                <span className="rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm leading-tight">
                   {park.designation}
                 </span>
               )}
               {distance !== null && (
-                <span className="rounded-full px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>
+                <span className="rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm leading-tight">
                   {distance < 10 ? distance.toFixed(1) : Math.round(distance)} mi
                 </span>
               )}
             </div>
-            <span className="rounded-full px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>
+            <span className="rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm leading-tight">
               {park.states}
             </span>
           </div>

@@ -155,28 +155,28 @@ function ExploreContent() {
           style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.78)", boxShadow: "var(--shadow-card)", backdropFilter: "blur(24px) saturate(145%)" }}
         >
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_10%,rgba(220,233,243,0.8),transparent_24rem),radial-gradient(circle_at_88%_20%,rgba(229,242,239,0.9),transparent_26rem)]" />
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-3 sm:gap-5">
             <div className="max-w-2xl">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em]" style={{ color: "var(--accent)" }}>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.24em] sm:mb-2" style={{ color: "var(--accent)" }}>
                 Explore
               </p>
-              <h1 className="text-4xl font-semibold sm:text-6xl" style={{ color: "var(--ink)" }}>
+              <h1 className="text-2xl font-semibold sm:text-4xl lg:text-6xl" style={{ color: "var(--ink)" }}>
                 Find your next park.
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 sm:text-base" style={{ color: "var(--muted)" }}>
+              <p className="hidden sm:block mt-3 max-w-xl text-sm leading-6 sm:text-base" style={{ color: "var(--muted)" }}>
                 Search the park system, filter by activity, and build a short list from a clean visual browser.
               </p>
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="mt-6 grid gap-3 grid-cols-2 lg:grid-cols-[minmax(0,1fr)_210px_auto]">
+          <form onSubmit={handleSearch} className="mt-3 grid gap-2.5 grid-cols-2 sm:mt-6 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_210px_auto]">
             <div className="relative col-span-2 lg:col-span-1">
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search parks, states, trails, wildlife, camping..."
-                className="min-h-14 w-full rounded-full border px-5 pr-11 text-[15px] font-medium shadow-none transition-all"
+                className="min-h-12 w-full rounded-full border px-5 pr-11 text-[15px] font-medium shadow-none transition-all sm:min-h-14"
                 style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
               />
               {query && (
@@ -204,7 +204,7 @@ function ExploreContent() {
             <select
               value={stateCode}
               onChange={(e) => setStateCode(e.target.value)}
-              className="col-span-2 sm:col-span-1 min-h-14 rounded-full border px-5 text-sm font-semibold shadow-none"
+              className="col-span-1 min-h-12 sm:min-h-14 rounded-full border px-4 text-sm font-semibold shadow-none"
               style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
             >
               {US_STATES.map(([code, name]) => (
@@ -214,14 +214,14 @@ function ExploreContent() {
 
             <button
               type="submit"
-              className="col-span-2 sm:col-span-1 min-h-14 rounded-full px-7 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-95"
+              className="col-span-1 min-h-12 sm:min-h-14 rounded-full px-4 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-95"
               style={{ background: "var(--ink)", boxShadow: "0 14px 34px rgba(17,19,21,0.16)" }}
             >
               Search
             </button>
           </form>
 
-          <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative">
             <div className="flex gap-2 overflow-x-auto pb-1 pr-10">
               {/* Near me chip */}

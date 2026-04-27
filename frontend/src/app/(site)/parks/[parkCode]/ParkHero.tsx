@@ -208,15 +208,15 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
           </div>
         </div>
       </div>
-    </div>
 
-    {lightboxIdx !== null && (
-      <PhotoLightbox
-        photos={photos}
-        index={lightboxIdx}
-        onClose={() => setLightboxIdx(null)}
-        onNavigate={(i) => { setLightboxIdx(i); setPhotoIdx(i); }}
-      />
-    )}
+      {lightboxIdx !== null && (
+        <PhotoLightbox
+          photos={photos}
+          index={lightboxIdx}
+          onClose={() => setLightboxIdx(null)}
+          onNavigate={(i) => { setLightboxIdx(i); setPhotoIdx(i); }}
+        />
+      )}
+    </div>
   );
 }

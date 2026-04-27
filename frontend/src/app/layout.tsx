@@ -19,9 +19,49 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
+const BASE_URL = "https://trailquest.app";
+
 export const metadata: Metadata = {
-  title: "TrailQuest — National Parks Hiker Planner",
-  description: "Discover, plan, and experience national parks. Interactive trail maps, smart itineraries, and more.",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "TrailQuest — National Parks Hiker Planner",
+    template: "%s | TrailQuest",
+  },
+  description:
+    "Discover, plan, and experience national parks. Interactive trail maps, smart itineraries, and more.",
+  openGraph: {
+    type: "website",
+    url: BASE_URL,
+    siteName: "TrailQuest",
+    title: "TrailQuest — National Parks Hiker Planner",
+    description:
+      "Discover, plan, and experience national parks. Interactive trail maps, smart itineraries, and more.",
+    images: [
+      {
+        url: "/hero.jpg",
+        width: 1200,
+        height: 630,
+        alt: "TrailQuest — National Parks Hiker Planner",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TrailQuest — National Parks Hiker Planner",
+    description:
+      "Discover, plan, and experience national parks. Interactive trail maps, smart itineraries, and more.",
+    images: ["/hero.jpg"],
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "TrailQuest",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

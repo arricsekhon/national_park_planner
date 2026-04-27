@@ -1,0 +1,17 @@
+{
+  "name": "TrailQuest",
+  "short_name": "TrailQuest",
+  "description": "Discover, plan, and experience national parks.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#111315",
+  "background_color": "#fbfbf8",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

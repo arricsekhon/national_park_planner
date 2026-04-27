@@ -26,6 +26,20 @@ interface Trip {
   isPublic?: boolean;
 }
 
+interface AiItineraryDay {
+  day: number;
+  label: string;
+  parkName: string;
+  activities: string[];
+  tip: string;
+}
+
+interface AiItinerary {
+  summary: string;
+  days: AiItineraryDay[];
+  packingAdditions: string[];
+}
+
 type IconName =
   | "calendar"
   | "check"
@@ -159,10 +173,11 @@ function rowToTrip(row: Record<string, unknown>): Trip {
 }
 
 export default function PlannerPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const toast = useToast();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [tripsReady, setTripsReady] = useState(false);
   const [parkSearch, setParkSearch] = useState("");
   const [parkResults, setParkResults] = useState<Park[]>([]);
   const [searching, setSearching] = useState(false);
@@ -170,12 +185,18 @@ export default function PlannerPage() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<"saved" | "error" | null>(null);
   const [mobileTab, setMobileTab] = useState<"trips" | "editor">("trips");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<AiItinerary | null>(null);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (!user) {
       const loaded = loadTrips();
       setTrips(loaded);
       setActiveId(loaded[0]?.id ?? null);
+      setTripsReady(true);
       return;
     }
 
@@ -209,9 +230,10 @@ export default function PlannerPage() {
 
         setTrips(loaded);
         setActiveId(loaded[0]?.id ?? null);
+        setTripsReady(true);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, authLoading]);
 
   const activeTrip = trips.find((t) => t.id === activeId) ?? null;
 
@@ -367,6 +389,48 @@ export default function PlannerPage() {
     : [];
   const tripDays = activeTrip ? getTripDays(activeTrip.startDate, activeTrip.endDate) : 0;
 
+  const generateItinerary = async () => {
+    if (!activeTrip || !activeTrip.stops.length) return;
+    setAiLoading(true);
+    setAiError("");
+    setAiResult(null);
+    try {
+      const res = await fetch("/api/generate-itinerary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tripName: activeTrip.name,
+          startDate: activeTrip.startDate,
+          endDate: activeTrip.endDate,
+          tripDays,
+          stops: activeTrip.stops,
+        }),
+      });
+      const data = await res.json() as AiItinerary & { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setAiResult(data);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const applyItinerary = () => {
+    if (!activeTrip || !aiResult) return;
+    const updatedStops = activeTrip.stops.map((stop) => {
+      const match = aiResult.days.find(
+        (d) => d.parkName.toLowerCase().includes(stop.parkName.split(" ")[0].toLowerCase())
+      ) ?? aiResult.days[stop.day - 1] ?? aiResult.days[0];
+      if (!match) return stop;
+      const notes = match.activities.join(" · ") + (match.tip ? ` — ${match.tip}` : "");
+      return { ...stop, day: match.day, notes };
+    });
+    updateTrip({ ...activeTrip, stops: updatedStops });
+    setAiResult(null);
+    toast("Itinerary applied to your planner!");
+  };
+
   return (
     <div
       className="min-h-screen pt-[66px]"
@@ -431,7 +495,22 @@ export default function PlannerPage() {
           </div>
 
           <div className="mt-5 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-220px)]">
-            {trips.length === 0 && (
+            {!tripsReady && (
+              <div className="space-y-2 animate-pulse">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="rounded-lg border p-3" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.72)" }}>
+                    <div className="flex items-start gap-3">
+                      <div className="h-8 w-8 rounded-md shrink-0" style={{ background: "var(--linen)" }} />
+                      <div className="flex-1 space-y-2 pt-0.5">
+                        <div className="h-3.5 w-3/4 rounded-full" style={{ background: "var(--linen)" }} />
+                        <div className="h-3 w-1/2 rounded-full" style={{ background: "var(--linen)" }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {tripsReady && trips.length === 0 && (
               <div className="rounded-xl border border-dashed px-4 py-8 text-center" style={{ borderColor: "var(--line)" }}>
                 <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -640,9 +719,29 @@ export default function PlannerPage() {
                         <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
                           Itinerary
                         </p>
-                        <h2 className="mt-1 text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-                          Route Builder
-                        </h2>
+                        <div className="mt-1 flex flex-wrap items-center gap-3">
+                          <h2 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
+                            Route Builder
+                          </h2>
+                          <button
+                            type="button"
+                            onClick={() => void generateItinerary()}
+                            disabled={aiLoading || !activeTrip.stops.length}
+                            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ background: "linear-gradient(135deg, #2a6049 0%, #3d7a60 100%)", color: "white", boxShadow: "0 4px 14px rgba(42,96,73,0.3)" }}
+                            title={!activeTrip.stops.length ? "Add at least one park stop first" : "Generate AI itinerary"}
+                          >
+                            {aiLoading ? (
+                              <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3"/><path d="M12 3a9 9 0 019 9"/></svg>
+                            ) : (
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+                            )}
+                            {aiLoading ? "Generating…" : "Generate with AI"}
+                          </button>
+                          {aiError && (
+                            <span className="text-xs font-medium text-red-500">{aiError}</span>
+                          )}
+                        </div>
                       </div>
                       <div className="relative w-full lg:max-w-sm">
                         <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
@@ -832,6 +931,108 @@ export default function PlannerPage() {
           )}
         </main>
       </div>
+
+      {/* AI Itinerary Modal */}
+      {aiResult && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ background: "rgba(17,19,21,0.6)", backdropFilter: "blur(6px)" }}
+          onClick={() => setAiResult(null)}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl flex flex-col"
+            style={{ background: "white", boxShadow: "0 32px 80px rgba(17,19,21,0.24)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b" style={{ borderColor: "var(--line)" }}>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>AI Generated</p>
+                </div>
+                <h3 className="text-xl font-semibold" style={{ color: "var(--ink)" }}>Your Itinerary</h3>
+                <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>{aiResult.summary}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiResult(null)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition hover:bg-stone-100"
+                style={{ color: "var(--muted)" }}
+              >
+                <Icon name="close" className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Days */}
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+              {aiResult.days.map((day) => (
+                <div key={day.day} className="rounded-xl border p-4" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.7)" }}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
+                      style={{ background: day.day === 1 ? "var(--accent)" : "var(--ink)" }}
+                    >
+                      {day.day}
+                    </span>
+                    <div>
+                      <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>{day.label}</p>
+                      <p className="text-xs" style={{ color: "var(--muted)" }}>{day.parkName}</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-1.5 mb-3">
+                    {day.activities.map((act, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm" style={{ color: "var(--ink-soft)" }}>
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
+                        {act}
+                      </li>
+                    ))}
+                  </ul>
+                  {day.tip && (
+                    <p className="rounded-lg px-3 py-2 text-xs leading-5" style={{ background: "rgba(23,109,101,0.07)", color: "var(--accent)" }}>
+                      💡 {day.tip}
+                    </p>
+                  )}
+                </div>
+              ))}
+
+              {aiResult.packingAdditions?.length > 0 && (
+                <div className="rounded-xl border p-4" style={{ borderColor: "var(--line)" }}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] mb-2" style={{ color: "var(--muted)" }}>Also pack</p>
+                  <div className="flex flex-wrap gap-2">
+                    {aiResult.packingAdditions.map((item) => (
+                      <span key={item} className="rounded-full px-3 py-1 text-xs font-medium" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-3 border-t px-6 py-4" style={{ borderColor: "var(--line)" }}>
+              <button
+                type="button"
+                onClick={() => setAiResult(null)}
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold transition hover:bg-stone-100"
+                style={{ color: "var(--muted)" }}
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={applyItinerary}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
+                style={{ background: "var(--ink)", boxShadow: "0 8px 24px rgba(17,19,21,0.16)" }}
+              >
+                <Icon name="check" className="h-4 w-4" />
+                Apply to planner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

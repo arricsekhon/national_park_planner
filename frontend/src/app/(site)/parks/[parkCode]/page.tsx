@@ -56,11 +56,21 @@ export default async function ParkPage({ params }: { params: Promise<{ parkCode:
         location={location}
       />
 
-      <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Mobile-only quick info strip */}
+      {park.entranceFees?.[0] && (
+        <div className="lg:hidden mx-4 mt-3 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm" style={{ background: "white", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
+          <span className="font-semibold" style={{ color: "var(--ink)" }}>Entrance Fee</span>
+          <span className="font-bold" style={{ color: "var(--accent)" }}>
+            {parseFloat(park.entranceFees[0].cost) === 0 ? "Free entry" : `$${park.entranceFees[0].cost}`}
+          </span>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Main column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
-          <section className="p-7 rounded-2xl" style={{ background: "white", boxShadow: "var(--shadow-card)" }}>
+          <section className="p-4 sm:p-7 rounded-2xl" style={{ background: "white", boxShadow: "var(--shadow-card)" }}>
             <p className="text-base leading-[1.85]" style={{ color: "#3a4a3a" }}>
               {park.description}
             </p>
@@ -106,7 +116,7 @@ export default async function ParkPage({ params }: { params: Promise<{ parkCode:
 
           {/* Activities */}
           {park.activities?.length > 0 && (
-            <section className="p-7 rounded-2xl" style={{ background: "white", boxShadow: "var(--shadow-card)" }} aria-label="Activities">
+            <section className="p-4 sm:p-7 rounded-2xl" style={{ background: "white", boxShadow: "var(--shadow-card)" }} aria-label="Activities">
               <SectionLabel>Activities</SectionLabel>
               <ul className="flex flex-wrap gap-2 mt-4" aria-label="Available activities">
                 {park.activities.map((a) => (
@@ -122,7 +132,7 @@ export default async function ParkPage({ params }: { params: Promise<{ parkCode:
 
           {/* Operating Hours */}
           {park.operatingHours?.length > 0 && (
-            <section className="p-7 rounded-2xl" style={{ background: "white", boxShadow: "var(--shadow-card)" }}>
+            <section className="p-4 sm:p-7 rounded-2xl" style={{ background: "white", boxShadow: "var(--shadow-card)" }}>
               <SectionLabel>Operating Hours</SectionLabel>
               <div className="mt-4 space-y-4">
                 {park.operatingHours.map((h, i) => (
@@ -132,9 +142,9 @@ export default async function ParkPage({ params }: { params: Promise<{ parkCode:
                       <p className="text-sm mb-2 leading-relaxed" style={{ color: "var(--muted-strong)" }}>{h.description}</p>
                     )}
                     {h.standardHours && (
-                      <dl className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs mt-2">
+                      <dl className="mt-2 text-xs divide-y" style={{ borderColor: "var(--line)" }}>
                         {Object.entries(h.standardHours).map(([day, hrs]) => (
-                          <div key={day} className="flex justify-between py-1 border-b" style={{ borderColor: "var(--line)" }}>
+                          <div key={day} className="flex justify-between py-1.5">
                             <dt className="capitalize font-medium" style={{ color: "var(--muted)" }}>{day}</dt>
                             <dd style={{ color: "var(--ink)" }}>{hrs}</dd>
                           </div>
@@ -161,7 +171,7 @@ export default async function ParkPage({ params }: { params: Promise<{ parkCode:
                   const fcfs = parseInt(camp.numberOfSitesFirstComeFirstServed ?? "0");
                   const campFee = camp.fees?.[0];
                   return (
-                    <div key={camp.id} className="p-6 rounded-2xl" style={{ background: "white", boxShadow: "var(--shadow-card)" }}>
+                    <div key={camp.id} className="p-4 sm:p-6 rounded-2xl" style={{ background: "white", boxShadow: "var(--shadow-card)" }}>
                       <div className="flex items-start justify-between gap-4 mb-4">
                         <div>
                           <h3 className="font-bold text-base mb-0.5" style={{ fontFamily: "var(--font-playfair)", color: "var(--ink)" }}>{camp.name}</h3>

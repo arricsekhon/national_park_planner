@@ -744,6 +744,27 @@ function NewEntryForm({
             </div>
           </section>
 
+          {/* Mobile save/cancel row — visible before fields so user doesn't scroll to bottom */}
+          <div className="flex gap-3 xl:hidden">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 rounded-lg border bg-white py-3 text-sm font-semibold transition hover:-translate-y-0.5"
+              style={{ borderColor: "var(--line)", color: "var(--muted)" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={!title.trim() || saving}
+              className="flex-1 rounded-lg py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-40"
+              style={{ background: "var(--ink)" }}
+            >
+              {saving ? "Saving…" : "Save entry"}
+            </button>
+          </div>
+
           <section className="rounded-lg border bg-white p-4 sm:p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
               <label>

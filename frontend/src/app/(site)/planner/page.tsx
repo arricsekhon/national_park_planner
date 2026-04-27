@@ -581,7 +581,7 @@ export default function PlannerPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <div className="mt-6 grid grid-cols-3 gap-3">
                   {[
                     { label: "Stops", value: activeTrip.stops.length.toString(), icon: "map" as IconName },
                     { label: "Days", value: tripDays ? tripDays.toString() : "Set dates", icon: "calendar" as IconName },
@@ -707,14 +707,14 @@ export default function PlannerPage() {
                       <div className="relative mt-5 space-y-3">
                         <div className="absolute bottom-8 left-5 top-8 w-px bg-stone-200" />
                         {activeTrip.stops.map((stop, i) => (
-                          <div key={stop.id} className="relative grid gap-3 rounded-lg border bg-white p-4 sm:grid-cols-[44px_minmax(0,1fr)_auto]" style={{ borderColor: "var(--line)" }}>
+                          <div key={stop.id} className="relative flex items-start gap-3 rounded-lg border bg-white p-4 sm:grid sm:grid-cols-[44px_minmax(0,1fr)_auto]" style={{ borderColor: "var(--line)" }}>
                             <div
-                              className="z-10 flex h-10 w-10 items-center justify-center rounded-md text-sm font-semibold text-white"
+                              className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
                               style={{ background: i === 0 ? "var(--accent)" : "var(--ink)" }}
                             >
                               {i + 1}
                             </div>
-                            <div className="min-w-0">
+                            <div className="flex-1 min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <Link
                                   href={`/parks/${stop.parkCode}`}

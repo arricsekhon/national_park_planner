@@ -3,19 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useAuth } from "@/lib/auth";
-import { useParkData } from "@/lib/park-data";
 
 const SEARCH_CHIPS = ["National parks", "California", "Utah", "Colorado", "Montana", "Wyoming", "Alaska"];
 
-export function HeroSearchAndStats({ parkCount }: { parkCount?: number }) {
+export function HeroSearchAndStats({ parkCount: _ }: { parkCount?: number }) {
   const router = useRouter();
-  const { user } = useAuth();
-  const { favorites, visitStatus } = useParkData();
   const [searchQuery, setSearchQuery] = useState("");
-
-  const beenCount = Object.values(visitStatus).filter((value) => value === "been").length;
-  const wantCount = Object.values(visitStatus).filter((value) => value === "want").length;
 
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
@@ -79,35 +72,6 @@ export function HeroSearchAndStats({ parkCount }: { parkCount?: number }) {
         </Link>
       </div>
 
-      <div className="animate-hero-4 mt-12 grid gap-3 rounded-xl border border-white/14 bg-white/10 p-3 backdrop-blur-2xl sm:grid-cols-4 lg:col-span-2">
-        <div className="rounded-lg bg-white/[0.08] px-5 py-4 text-center">
-          <p className="text-3xl font-semibold">{parkCount ? parkCount.toLocaleString() : "474"}</p>
-          <p className="mt-1 text-xs font-medium text-white/58">Park sites</p>
-        </div>
-        {user ? (
-          <>
-            {[
-              { num: favorites.length, label: "Saved by you" },
-              { num: beenCount, label: "Visited" },
-              { num: wantCount, label: "Want to go" },
-            ].map(({ num, label }) => (
-              <div key={label} className="rounded-lg bg-white/[0.08] px-5 py-4 text-center">
-                <p className="text-3xl font-semibold">{num}</p>
-                <p className="mt-1 text-xs font-medium text-white/58">{label}</p>
-              </div>
-            ))}
-          </>
-        ) : (
-          <div className="sm:col-span-3 flex items-center justify-center rounded-lg bg-white/[0.08] px-5 py-4">
-            <Link
-              href="/auth/signin"
-              className="text-sm font-medium text-white/62 transition-colors hover:text-white"
-            >
-              Sign in to track your visits →
-            </Link>
-          </div>
-        )}
-      </div>
     </>
   );
 }

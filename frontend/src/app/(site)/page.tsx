@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { API_BASE, type Park } from "@/lib/api";
+import AnimatedSection from "./AnimatedSection";
 import FeaturedImageSwipe from "./FeaturedImageSwipe";
 import { HeroSearchAndStats } from "./HomeActions";
 import NearbySection from "./NearbySection";
@@ -165,6 +166,7 @@ export default async function HomePage() {
       </section>
 
       <section className="premium-shell py-24 sm:py-32">
+        <AnimatedSection direction="up">
         <div className="grid items-end gap-10 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <p className="mb-5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
@@ -183,11 +185,12 @@ export default async function HomePage() {
             </p>
           </div>
         </div>
+        </AnimatedSection>
 
         <div className="mt-16 overflow-hidden rounded-xl border" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.58)", boxShadow: "var(--shadow-card)" }}>
           {JOURNEY_STEPS.map(({ href, eyebrow, title, desc }, index) => (
+            <AnimatedSection key={href} direction="left" delay={index * 100}>
             <Link
-              key={href}
               href={href}
               className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/70 sm:px-8 sm:py-5 lg:grid lg:grid-cols-[120px_1fr_260px_40px] lg:items-center lg:gap-5 lg:py-8"
               style={{ borderTop: index === 0 ? "none" : "1px solid var(--line)" }}
@@ -208,6 +211,7 @@ export default async function HomePage() {
                 →
               </span>
             </Link>
+            </AnimatedSection>
           ))}
         </div>
 
@@ -222,6 +226,7 @@ export default async function HomePage() {
 
       <section className="premium-shell pb-24 sm:pb-32">
         <div className="grid items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+          <AnimatedSection direction="left">
           <div className="relative min-h-[520px] overflow-hidden rounded-xl" style={{ background: "var(--surface-soft)", boxShadow: "var(--shadow-card)" }}>
             {featureImage && (
               <Image
@@ -240,6 +245,8 @@ export default async function HomePage() {
               </h2>
             </div>
           </div>
+          </AnimatedSection>
+          <AnimatedSection direction="right">
           <div className="lg:pl-8">
             <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
               Start with what you want to do
@@ -251,24 +258,31 @@ export default async function HomePage() {
               Begin with the kind of day you want. The interface stays calm while the park data does the heavy lifting.
             </p>
             <div className="mt-8 flex flex-wrap gap-2.5">
-              {ACTIVITY_DISCOVERY.map(({ label, q }) => (
+              {ACTIVITY_DISCOVERY.map(({ label, q }, index) => (
+                <AnimatedSection key={q} direction="up" delay={index * 60}>
                 <Link
-                  key={q}
                   href={`/explore?q=${q}`}
                   className="rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:bg-white"
                   style={{ borderColor: "var(--line)", color: "var(--ink)", background: "rgba(255,255,255,0.56)" }}
                 >
                   {label}
                 </Link>
+                </AnimatedSection>
               ))}
             </div>
           </div>
+          </AnimatedSection>
         </div>
       </section>
 
+      <AnimatedSection direction="up">
       <NearbySection />
+      </AnimatedSection>
+      <AnimatedSection direction="up">
       <UserCollection />
+      </AnimatedSection>
 
+      <AnimatedSection direction="up">
       <section className="premium-shell pb-28 sm:pb-36">
         <div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
@@ -286,6 +300,7 @@ export default async function HomePage() {
 
         <FeaturedImageSwipe parks={featured} />
       </section>
+      </AnimatedSection>
     </main>
   );
 }

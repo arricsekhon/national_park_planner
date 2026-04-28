@@ -372,33 +372,6 @@ export default function Nav() {
       </div>
     </nav>
 
-    {/* Sticky bottom tab bar — mobile only, hidden on auth pages */}
-    {!pathname.startsWith("/auth") && (
-      <div
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch"
-        style={{
-          background: "rgba(251,251,248,0.96)",
-          backdropFilter: "blur(24px) saturate(160%)",
-          borderTop: "1px solid rgba(17,19,21,0.08)",
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
-        }}
-      >
-        {TAB_ITEMS.map(({ href, label, icon }) => {
-          const active = pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className="flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-colors"
-              style={{ color: active ? "var(--accent)" : "rgba(17,19,21,0.45)" }}
-            >
-              {icon}
-              <span className="text-[10px] font-semibold tracking-wide">{label}</span>
-            </Link>
-          );
-        })}
-      </div>
-    )}
     </>
   );
 }

@@ -12,13 +12,16 @@
     "@anthropic-ai/sdk": "^0.91.1",
     "@googlemaps/js-api-loader": "^2.0.2",
     "@supabase/supabase-js": "^2.104.1",
+    "leaflet": "^1.9.4",
     "next": "16.2.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/google.maps": "^3.64.0",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

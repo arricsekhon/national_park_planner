@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { searchParks, type Park } from "@/lib/api";
+import { searchParks, parseLatLong, type Park } from "@/lib/api";
+import type { StopCoord } from "./TripMap";
+
+const TripMap = dynamic(() => import("./TripMap"), { ssr: false });
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/lib/toast";
@@ -13,6 +17,8 @@ interface TripStop {
   parkName: string;
   day: number;
   notes: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface Trip {
@@ -185,6 +191,7 @@ export default function PlannerPage() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<"saved" | "error" | null>(null);
   const [mobileTab, setMobileTab] = useState<"trips" | "editor">("trips");
+  const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AiItinerary | null>(null);
   const [aiError, setAiError] = useState("");
@@ -361,12 +368,14 @@ export default function PlannerPage() {
 
   const addStop = (park: Park) => {
     if (!activeTrip) return;
+    const coords = parseLatLong(park.latLong ?? "");
     const stop: TripStop = {
       id: createLocalId("stop"),
       parkCode: park.parkCode,
       parkName: park.fullName,
       day: (activeTrip.stops[activeTrip.stops.length - 1]?.day ?? 0) + 1,
       notes: "",
+      ...(coords ?? {}),
     };
     updateTrip({ ...activeTrip, stops: [...activeTrip.stops, stop] });
     setParkSearch("");
@@ -840,14 +849,44 @@ export default function PlannerPage() {
                                   />
                                 </label>
                               </div>
-                              <input
-                                type="text"
-                                placeholder="Trail ideas, arrival time, campsite..."
-                                value={stop.notes}
-                                onChange={(e) => updateStop(stop.id, { notes: e.target.value })}
-                                className="mt-2 w-full rounded-lg border px-3 py-2 text-sm outline-none"
-                                style={{ borderColor: "var(--line)", color: "var(--ink-soft)", background: "rgba(251,251,248,0.74)" }}
-                              />
+                              {editingStopId === stop.id || !stop.notes ? (
+                                <textarea
+                                  autoFocus={editingStopId === stop.id}
+                                  placeholder="Trail ideas, arrival time, campsite..."
+                                  value={stop.notes}
+                                  rows={3}
+                                  onChange={(e) => updateStop(stop.id, { notes: e.target.value })}
+                                  onBlur={() => setEditingStopId(null)}
+                                  className="mt-2 w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none leading-6"
+                                  style={{ borderColor: "var(--accent)", color: "var(--ink-soft)", background: "rgba(251,251,248,0.74)" }}
+                                />
+                              ) : (
+                                <div className="mt-2 rounded-lg border px-3 py-2.5 cursor-text" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.74)" }} onClick={() => setEditingStopId(stop.id)}>
+                                  {(() => {
+                                    const [activitiesPart, tip] = stop.notes.split(" — ");
+                                    const activities = activitiesPart.split(" · ").map(s => s.trim()).filter(Boolean);
+                                    const hasDots = stop.notes.includes(" · ");
+                                    if (!hasDots) {
+                                      return <p className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>{stop.notes}</p>;
+                                    }
+                                    return (
+                                      <div className="space-y-1.5">
+                                        {activities.map((act, ai) => (
+                                          <div key={ai} className="flex items-start gap-2">
+                                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
+                                            <span className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>{act}</span>
+                                          </div>
+                                        ))}
+                                        {tip && (
+                                          <p className="mt-1 rounded-md px-2.5 py-1.5 text-xs leading-5" style={{ background: "rgba(23,109,101,0.07)", color: "var(--accent)" }}>
+                                            💡 {tip}
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              )}
                             </div>
                             <button
                               type="button"
@@ -864,6 +903,28 @@ export default function PlannerPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Route map — only shown when stops have coordinates */}
+                  {(() => {
+                    const mapped: StopCoord[] = activeTrip.stops
+                      .filter((s): s is TripStop & { lat: number; lng: number } =>
+                        typeof s.lat === "number" && typeof s.lng === "number"
+                      )
+                      .map((s) => ({ id: s.id, parkName: s.parkName, day: s.day, notes: s.notes, lat: s.lat, lng: s.lng }));
+                    if (mapped.length === 0) return null;
+                    return (
+                      <section className="rounded-lg border bg-white overflow-hidden" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                        <div className="flex items-center gap-2 px-5 py-4 border-b" style={{ borderColor: "var(--line)" }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15"/><path d="M15 6v15"/>
+                          </svg>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>Route Map</p>
+                          <span className="ml-auto text-xs font-medium" style={{ color: "var(--muted)" }}>{mapped.length} {mapped.length === 1 ? "stop" : "stops"}</span>
+                        </div>
+                        <TripMap stops={mapped} />
+                      </section>
+                    );
+                  })()}
                 </section>
 
                 <aside className="space-y-4 xl:sticky xl:top-[82px] xl:self-start">

@@ -130,6 +130,7 @@ export default function Nav() {
         backdropFilter: transparent ? "none" : "blur(24px) saturate(160%)",
         borderBottom: transparent ? "1px solid transparent" : "1px solid rgba(17,19,21,0.08)",
         boxShadow: transparent ? "none" : "0 10px 40px rgba(17,19,21,0.06)",
+        paddingTop: "env(safe-area-inset-top)",
       }}
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-8 h-[66px] flex items-center justify-between">

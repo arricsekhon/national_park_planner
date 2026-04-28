@@ -132,8 +132,8 @@ export default function Nav() {
         boxShadow: transparent ? "none" : "0 10px 40px rgba(17,19,21,0.06)",
       }}
     >
-      {/* Covers the iOS status bar area without growing the nav's 66px content row */}
-      <div style={{ height: "env(safe-area-inset-top, 0px)" }} />
+      {/* Always-white cover for the iOS status bar zone */}
+      <div style={{ height: "env(safe-area-inset-top, 0px)", background: "rgba(251,251,248,0.96)", backdropFilter: "blur(24px) saturate(160%)" }} />
       <div className="max-w-7xl mx-auto px-5 sm:px-8 h-[66px] flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">

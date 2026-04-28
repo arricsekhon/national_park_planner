@@ -60,7 +60,7 @@ export default async function PublicTripPage({ params }: { params: Promise<{ id:
   const days = Object.keys(byDay).map(Number).sort((a, b) => a - b);
 
   return (
-    <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[66px]" style={{ background: "var(--surface)" }}>
       <div className="max-w-3xl mx-auto px-4 py-10">
         {/* Header */}
         <div

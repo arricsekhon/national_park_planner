@@ -159,7 +159,7 @@ function ExploreContent() {
         : `${parks.length} of ${total} NPS sites`;
 
   return (
-    <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[66px]" style={{ background: "var(--surface)" }}>
       <div className="mx-auto flex min-h-[calc(100vh-66px)] max-w-[1680px] flex-col px-4 py-4 sm:px-6">
         <section
           className="relative z-20 mb-4 overflow-hidden rounded-[2.2rem] border p-4 sm:p-5"
@@ -576,7 +576,7 @@ function ParkListCard({
 
 function ExploreSkeleton() {
   return (
-    <div className="min-h-screen pt-[var(--nav-h)] animate-pulse" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[66px] animate-pulse" style={{ background: "var(--surface)" }}>
       <div className="mx-auto flex max-w-[1680px] flex-col px-4 py-4 sm:px-6">
         <div className="mb-4 rounded-[2.2rem] border p-5" style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.78)" }}>
           <div className="h-3 w-16 rounded-full mb-3" style={{ background: "var(--linen)" }} />

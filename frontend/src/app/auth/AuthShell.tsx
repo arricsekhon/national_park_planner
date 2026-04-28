@@ -29,7 +29,7 @@ export function AuthShell({
   const visual = VISUAL_STYLES[visualVariant];
 
   return (
-    <div className="min-h-screen pt-[66px]" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1480px] gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_460px] xl:grid-cols-[minmax(0,1fr)_500px]">
         <section
           className="relative hidden overflow-hidden rounded-lg border lg:block"

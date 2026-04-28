@@ -66,7 +66,7 @@ function CompareContent() {
 
   if (codes.length === 0) {
     return (
-      <div className="min-h-screen pt-[66px] flex items-center justify-center" style={{ background: "var(--surface)" }}>
+      <div className="min-h-screen pt-[var(--nav-h)] flex items-center justify-center" style={{ background: "var(--surface)" }}>
         <div className="text-center">
           <p className="font-bold mb-3" style={{ fontFamily: "var(--font-playfair)", color: "var(--ink)", fontSize: "1.2rem" }}>
             No parks selected
@@ -80,7 +80,7 @@ function CompareContent() {
   }
 
   return (
-    <div className="min-h-screen pt-[66px]" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Header */}
         <div className="mb-8">
@@ -323,7 +323,7 @@ function CompareMobileItem({ label, value }: { label: string; value: string }) {
 export default function ComparePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen pt-[66px] flex items-center justify-center" style={{ color: "var(--muted)" }}>
+      <div className="min-h-screen pt-[var(--nav-h)] flex items-center justify-center" style={{ color: "var(--muted)" }}>
         <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin" />
       </div>
     }>

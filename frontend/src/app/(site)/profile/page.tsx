@@ -77,7 +77,7 @@ export default function ProfilePage() {
   const beenCount = Object.values(visitStatus).filter((v) => v === "been").length;
 
   return (
-    <div className="min-h-screen pt-[66px]" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       {/* Header */}
       <div
         className="relative overflow-hidden"

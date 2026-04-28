@@ -1,6 +1,6 @@
 export default function PlannerLoading() {
   return (
-    <div className="min-h-screen pt-[66px] animate-pulse" style={{ background: "linear-gradient(180deg, rgba(251,251,248,0.92) 0%, rgba(245,246,243,0.96) 100%)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)] animate-pulse" style={{ background: "linear-gradient(180deg, rgba(251,251,248,0.92) 0%, rgba(245,246,243,0.96) 100%)" }}>
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
         {/* Sidebar */}
         <aside className="rounded-lg border bg-white/80 p-4" style={{ borderColor: "rgba(17,19,21,0.08)" }}>

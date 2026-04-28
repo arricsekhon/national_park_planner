@@ -1,6 +1,6 @@
 export default function JournalLoading() {
   return (
-    <div className="min-h-screen pt-[66px] animate-pulse" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)] animate-pulse" style={{ background: "var(--surface)" }}>
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* Sidebar skeleton */}
         <aside className="rounded-lg border bg-white/80 p-4" style={{ borderColor: "var(--line)" }}>

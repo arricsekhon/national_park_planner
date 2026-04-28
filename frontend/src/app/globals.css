@@ -2,11 +2,10 @@
 
 body { overflow-x: clip; }
 
-@media (max-width: 767px) {
-  body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
-}
 
 :root {
+  --nav-h: calc(66px + env(safe-area-inset-top, 0px));
+
   /* Core design tokens */
   --ink: #111315;
   --ink-soft: #2b3033;

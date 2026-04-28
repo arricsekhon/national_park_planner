@@ -996,7 +996,7 @@ export default function PlannerPage() {
       {/* AI Itinerary Modal */}
       {aiResult && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-4"
           style={{ background: "rgba(17,19,21,0.6)", backdropFilter: "blur(6px)" }}
           onClick={() => setAiResult(null)}
         >

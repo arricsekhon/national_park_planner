@@ -55,18 +55,29 @@ const ACTIVITY_DISCOVERY = [
   { label: "Swimming", q: "swimming" },
 ];
 
+const ICONIC_PARK_CODES = [
+  "yose",  // Yosemite
+  "grca",  // Grand Canyon
+  "yell",  // Yellowstone
+  "zion",  // Zion
+  "grsm",  // Great Smoky Mountains
+  "glac",  // Glacier
+  "romo",  // Rocky Mountain
+  "acad",  // Acadia
+  "olym",  // Olympic
+];
+
 async function getFeaturedParks(): Promise<{ parks: Park[]; total: number }> {
   try {
-    const params = new URLSearchParams({ limit: "9", start: "0" });
-    const response = await fetch(`${API_BASE}/parks?${params}`, {
-      next: { revalidate: 300 },
-    });
-    if (!response.ok) return { parks: [], total: 0 };
-    const data = await response.json();
-    return {
-      parks: Array.isArray(data.parks) ? data.parks.slice(0, 9) : [],
-      total: typeof data.total === "number" ? data.total : 0,
-    };
+    const results = await Promise.all(
+      ICONIC_PARK_CODES.map((code) =>
+        fetch(`${API_BASE}/parks/${code}`, { next: { revalidate: 3600 } })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      )
+    );
+    const parks = results.filter(Boolean) as Park[];
+    return { parks, total: parks.length };
   } catch {
     return { parks: [], total: 0 };
   }
@@ -158,10 +169,6 @@ export default async function HomePage() {
             </div>
           </aside>
 
-          <div className="absolute bottom-7 left-1/2 hidden -translate-x-1/2 items-center gap-2 rounded-lg border border-white/16 bg-black/24 px-4 py-2 text-xs text-white/62 backdrop-blur-xl md:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
-            {HERO_LABEL}
-          </div>
         </div>
       </section>
 

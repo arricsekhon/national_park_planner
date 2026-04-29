@@ -138,6 +138,23 @@ body {
   text-rendering: geometricPrecision;
 }
 
+.app-nav::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -140px;
+  height: calc(140px + env(safe-area-inset-top, 0px));
+  pointer-events: none;
+  background: rgba(251, 251, 248, 0.98);
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.app-nav--solid::before {
+  opacity: 1;
+}
+
 /* Subtle film grain across the entire site */
 body::after {
   content: "";

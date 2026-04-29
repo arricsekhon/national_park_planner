@@ -124,7 +124,7 @@ export default function Nav() {
   return (
     <>
     <nav
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
+      className={`app-nav fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${transparent ? "app-nav--transparent" : "app-nav--solid"}`}
       style={{
         background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,0.28), transparent)" : "rgba(251,251,248,0.96)",
         backdropFilter: transparent ? "none" : "blur(24px) saturate(160%)",

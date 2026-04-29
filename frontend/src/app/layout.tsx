@@ -25,6 +25,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#fbfbf8",
+  colorScheme: "light",
 };
 
 export const metadata: Metadata = {
@@ -61,7 +63,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "TrailQuest",
   },
   icons: {

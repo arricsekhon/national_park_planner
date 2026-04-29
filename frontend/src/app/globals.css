@@ -7,6 +7,8 @@ body { overflow-x: clip; }
 }
 
 :root {
+  --nav-h: calc(66px + env(safe-area-inset-top, 0px));
+
   /* Core design tokens */
   --ink: #111315;
   --ink-soft: #2b3033;

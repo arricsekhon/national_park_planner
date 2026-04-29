@@ -16,7 +16,7 @@ export default function SiteError({
 
   return (
     <div
-      className="min-h-screen pt-[66px] flex items-center justify-center px-6"
+      className="min-h-screen pt-[var(--nav-h)] flex items-center justify-center px-6"
       style={{ background: "var(--surface)" }}
     >
       <div className="text-center max-w-md">

@@ -442,7 +442,7 @@ export default function PlannerPage() {
 
   return (
     <div
-      className="min-h-screen pt-[66px]"
+      className="min-h-screen pt-[var(--nav-h)]"
       style={{
         background:
           "linear-gradient(180deg, rgba(251,251,248,0.92) 0%, rgba(245,246,243,0.96) 48%, rgba(251,251,248,1) 100%)",

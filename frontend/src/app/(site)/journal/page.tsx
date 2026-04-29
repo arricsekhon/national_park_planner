@@ -203,7 +203,7 @@ function JournalContent() {
   }
 
   return (
-    <div className="min-h-screen pt-[66px]" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       {!user && (
         <div className="mx-auto max-w-[1540px] px-4 pt-4">
           <div className="flex items-center justify-between gap-4 rounded-xl px-4 py-3 text-sm" style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)", color: "var(--accent)" }}>
@@ -465,7 +465,7 @@ function JournalContent() {
 
 function JournalSkeleton() {
   return (
-    <div className="min-h-screen pt-[66px] animate-pulse" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)] animate-pulse" style={{ background: "var(--surface)" }}>
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="rounded-lg border bg-white/80 p-4" style={{ borderColor: "var(--line)" }}>
           <div className="h-4 w-20 rounded-full mb-2" style={{ background: "var(--linen)" }} />
@@ -531,7 +531,7 @@ function EntryDetail({
   onDelete: () => void;
 }) {
   return (
-    <div className="min-h-screen pt-[66px]" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       <div className="mx-auto max-w-6xl px-4 py-4">
         <div className="mb-4 flex items-center justify-between gap-4">
           <button
@@ -720,7 +720,7 @@ function NewEntryForm({
   };
 
   return (
-    <div className="min-h-screen pt-[66px]" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_370px]">
         <main className="min-w-0 space-y-4">
           <section

@@ -1,6 +1,6 @@
 export default function ExploreLoading() {
   return (
-    <div className="min-h-screen pt-[66px] animate-pulse" style={{ background: "var(--surface)" }}>
+    <div className="min-h-screen pt-[var(--nav-h)] animate-pulse" style={{ background: "var(--surface)" }}>
       <div className="mx-auto flex min-h-[calc(100vh-66px)] max-w-[1680px] flex-col px-4 py-4 sm:px-6">
         <section
           className="relative mb-4 overflow-hidden rounded-[2.2rem] border p-4 sm:p-5"

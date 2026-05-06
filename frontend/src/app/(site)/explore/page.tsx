@@ -153,6 +153,16 @@ function ExploreContent() {
     fetchParks(query, stateCode);
   };
   const npCount = parks.filter((p) => p.designation === "National Park").length;
+  const hasActiveFilters = Boolean(query || stateCode || activityFilter || npOnly || userLocation);
+  const activeFilterCount = [query, stateCode, activityFilter, npOnly, userLocation].filter(Boolean).length;
+  const clearFilters = () => {
+    setQuery("");
+    setStateCode("");
+    setActivityFilter("");
+    setNpOnly(false);
+    setUserLocation(null);
+    void fetchParks("", "");
+  };
   const resultText = userLocation
     ? `${displayParks.length} nearby NPS sites`
     : npOnly
@@ -240,7 +250,7 @@ function ExploreContent() {
 
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative">
-            <div className="flex gap-2 overflow-x-auto pb-1 pr-10">
+            <div className="flex gap-2 overflow-x-auto pb-1 pr-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {/* Near me chip */}
               <button
                 type="button"
@@ -333,6 +343,29 @@ function ExploreContent() {
               {loading ? "Searching..." : resultText}
             </p>
           </div>
+
+          {hasActiveFilters && (
+            <div className="mt-3 flex flex-col gap-2 rounded-2xl border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "rgba(23,109,101,0.16)", background: "rgba(255,255,255,0.62)" }}>
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--muted)" }}>
+                <span className="mr-1 uppercase tracking-[0.14em]" style={{ color: "var(--accent)" }}>
+                  {activeFilterCount} active
+                </span>
+                {query && <span className="rounded-full bg-white px-2.5 py-1">Search: {query}</span>}
+                {stateCode && <span className="rounded-full bg-white px-2.5 py-1">{stateCode}</span>}
+                {activityFilter && <span className="rounded-full bg-white px-2.5 py-1">{activityFilter}</span>}
+                {npOnly && <span className="rounded-full bg-white px-2.5 py-1">National Parks</span>}
+                {userLocation && <span className="rounded-full bg-white px-2.5 py-1">Nearest first</span>}
+              </div>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="shrink-0 self-start rounded-full px-3 py-1.5 text-xs font-semibold transition hover:bg-white sm:self-auto"
+                style={{ color: "var(--ink)" }}
+              >
+                Reset view
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="flex-1 overflow-hidden">
@@ -381,7 +414,7 @@ function ExploreContent() {
                       </p>
                       <button
                         type="button"
-                        onClick={() => { setActivityFilter(""); setNpOnly(false); setQuery(""); setStateCode(""); }}
+                        onClick={clearFilters}
                         className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
                         style={{ background: "var(--ink)" }}
                       >
@@ -470,14 +503,21 @@ function ParkListCard({
         <Link href={`/parks/${park.parkCode}`} className="absolute inset-0 z-0 rounded-xl" aria-label={`View ${park.fullName}`} />
 
         <div className="relative h-44 overflow-hidden rounded-[1.25rem]" style={{ background: "var(--surface-soft)" }}>
-          {image && (
+          {image ? (
             <Image
               src={image.url}
-              alt={image.altText}
+              alt={image.altText || park.fullName}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-105"
               sizes="(min-width: 1536px) 25vw, (min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
             />
+          ) : (
+            <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,var(--accent-soft),var(--surface-soft))]">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2 21 8 8l4.5 8L16 10l6 11H2Z" />
+                <path d="M8 21 12 13l4 8" />
+              </svg>
+            </div>
           )}
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.1)_48%,rgba(0,0,0,0.52)_100%)]" />
           <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
@@ -521,6 +561,9 @@ function ParkListCard({
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "rgba(169,111,45,0.1)", color: "var(--amber)" }}>
+              {park.states || "NPS"}
+            </span>
             {fee && (
               <span className="rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
                 {parseFloat(fee.cost) === 0 ? "Free entry" : `$${fee.cost} entry`}

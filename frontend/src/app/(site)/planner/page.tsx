@@ -611,6 +611,14 @@ export default function PlannerPage() {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/62">
+                      <button
+                        type="button"
+                        onClick={() => setMobileTab("trips")}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white/10 px-2.5 text-white transition hover:bg-white/16 lg:hidden"
+                      >
+                        <Icon name="chevron" className="h-3.5 w-3.5 rotate-90" />
+                        Trips
+                      </button>
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-white">
                         <Icon name="route" className="h-4 w-4" />
                       </span>
@@ -670,7 +678,7 @@ export default function PlannerPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 grid grid-cols-3 gap-3">
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
                   {[
                     { label: "Stops", value: activeTrip.stops.length.toString(), icon: "map" as IconName },
                     { label: "Days", value: tripDays ? tripDays.toString() : "Set dates", icon: "calendar" as IconName },
@@ -678,7 +686,7 @@ export default function PlannerPage() {
                   ].map(({ label, value, icon }) => (
                     <div key={label} className="rounded-lg border border-white/14 bg-white/10 p-4 backdrop-blur-xl">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-2xl font-semibold">{value}</p>
+                        <p className="min-w-0 truncate text-2xl font-semibold">{value}</p>
                         <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white/10 text-white/72">
                           <Icon name={icon} className="h-4 w-4" />
                         </span>
@@ -762,7 +770,7 @@ export default function PlannerPage() {
                         />
                         {(parkResults.length > 0 || searching) && (
                           <div
-                            className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border bg-white"
+                            className="absolute left-0 right-0 top-full z-20 mt-2 max-h-80 overflow-y-auto rounded-lg border bg-white"
                             style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-card-hover)" }}
                           >
                             {searching && (
@@ -798,7 +806,7 @@ export default function PlannerPage() {
                     </div>
 
                     {activeTrip.stops.length === 0 ? (
-                      <div className="mt-5 rounded-lg border border-dashed px-5 py-10 text-center" style={{ borderColor: "rgba(17,19,21,0.16)" }}>
+                      <div className="mt-5 rounded-lg border border-dashed px-5 py-10 text-center" style={{ borderColor: "rgba(17,19,21,0.16)", background: "linear-gradient(180deg, rgba(251,251,248,0.9), rgba(255,255,255,0.72))" }}>
                         <span
                           className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg"
                           style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
@@ -816,7 +824,7 @@ export default function PlannerPage() {
                       <div className="relative mt-5 space-y-3">
                         <div className="absolute bottom-8 left-5 top-8 w-px bg-stone-200" />
                         {activeTrip.stops.map((stop, i) => (
-                          <div key={stop.id} className="relative flex items-start gap-3 rounded-lg border bg-white p-4 sm:grid sm:grid-cols-[44px_minmax(0,1fr)_auto]" style={{ borderColor: "var(--line)" }}>
+                          <div key={stop.id} className="relative flex items-start gap-3 rounded-lg border bg-white p-4 pr-14 sm:grid sm:grid-cols-[44px_minmax(0,1fr)_auto] sm:pr-4" style={{ borderColor: "var(--line)", boxShadow: "0 10px 28px rgba(17,19,21,0.04)" }}>
                             <div
                               className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
                               style={{ background: i === 0 ? "var(--accent)" : "var(--ink)" }}
@@ -889,7 +897,7 @@ export default function PlannerPage() {
                             <button
                               type="button"
                               onClick={() => removeStop(stop.id)}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-red-50"
+                              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-red-50 sm:static"
                               style={{ color: "var(--muted)" }}
                               aria-label={`Remove ${stop.parkName}`}
                               title="Remove stop"

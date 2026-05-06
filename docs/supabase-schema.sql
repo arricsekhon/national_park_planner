@@ -78,10 +78,22 @@ on public.park_ratings for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy "Users can manage their journal entries"
-on public.journal_entries for all
+create policy "Users can read their journal entries"
+on public.journal_entries for select
+using (auth.uid() = user_id);
+
+create policy "Users can create their journal entries"
+on public.journal_entries for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update their journal entries"
+on public.journal_entries for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
+
+create policy "Users can delete their journal entries"
+on public.journal_entries for delete
+using (auth.uid() = user_id);
 
 create policy "Users can manage their trips"
 on public.trips for all

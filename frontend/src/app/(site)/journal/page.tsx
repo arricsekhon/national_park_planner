@@ -102,17 +102,19 @@ function JournalContent() {
 
   useEffect(() => {
     if (!user) {
-      const loaded = loadEntries();
-      setEntries(loaded);
-      setLoadingEntries(false);
-      const id = searchParams.get("id");
-      if (id) {
-        const entry = loaded.find((e) => e.id === id);
-        if (entry) setViewEntry(entry);
-      }
+      queueMicrotask(() => {
+        const loaded = loadEntries();
+        setEntries(loaded);
+        setLoadingEntries(false);
+        const id = searchParams.get("id");
+        if (id) {
+          const entry = loaded.find((e) => e.id === id);
+          if (entry) setViewEntry(entry);
+        }
+      });
       return;
     }
-    setLoadingEntries(true);
+    queueMicrotask(() => setLoadingEntries(true));
     supabase
       .from("journal_entries")
       .select("*")
@@ -626,7 +628,7 @@ function NewEntryForm({
 }) {
   const { user } = useAuth();
   const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => todayInputValue());
   const [parkName, setParkName] = useState(prefillParkName);
   const [parkCode, setParkCode] = useState(prefillParkCode);
   const [rating, setRating] = useState(5);
@@ -639,10 +641,6 @@ function NewEntryForm({
   const fileRef = useRef<HTMLInputElement>(null);
   // Stable entry ID so storage paths are consistent even if component re-renders
   const [entryId] = useState(() => createLocalId("entry"));
-
-  useEffect(() => {
-    setDate(todayInputValue());
-  }, []);
 
   useEffect(() => {
     const trimmed = parkSearch.trim();

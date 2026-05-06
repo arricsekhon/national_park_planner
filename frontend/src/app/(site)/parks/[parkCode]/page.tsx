@@ -1,6 +1,4 @@
-import Image from "next/image";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import {
   getPark, getParkAlerts, getCampgrounds, getThingsToDo,
   parseLatLong, type Park, type Alert, type Campground,

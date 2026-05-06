@@ -48,7 +48,10 @@ The project is split into:
 │   ├── routers/
 │   │   ├── parks.py
 │   │   └── weather.py
+│   ├── tests/
 │   └── requirements.txt
+├── docs/
+│   └── supabase-schema.sql
 └── frontend/
     ├── src/app/
     │   ├── (site)/
@@ -76,6 +79,12 @@ Optional integrations:
 Create `backend/.env`:
 
 ```bash
+cp backend/.env.example backend/.env
+```
+
+Then fill in:
+
+```bash
 NPS_API_KEY=your_nps_api_key
 OPENWEATHER_API_KEY=your_openweather_api_key
 ALLOWED_ORIGINS=http://localhost:3000
@@ -86,6 +95,12 @@ ALLOWED_ORIGINS=http://localhost:3000
 Create `frontend/.env.local`:
 
 ```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+Then fill in:
+
+```bash
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -94,6 +109,21 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
 `NEXT_PUBLIC_API_BASE_URL` defaults to `http://localhost:8000` if omitted. `ANTHROPIC_API_KEY` is only needed for the itinerary generation route.
+
+## Supabase Setup
+
+Run `docs/supabase-schema.sql` in the Supabase SQL editor after creating the project and enabling email/password authentication.
+
+The schema creates:
+
+- `favorites`
+- `visit_status`
+- `park_ratings`
+- `journal_entries`
+- `trips`
+- `journal-photos` storage bucket
+
+It also enables row level security so users can manage their own saved parks, trips, ratings, and journal entries. Public trip links are readable when `trips.is_public` is true.
 
 ## Local Development
 
@@ -134,6 +164,27 @@ From `backend/`:
 
 ```bash
 uvicorn main:app --reload --port 8000
+python -m unittest discover -s tests
+```
+
+## Verification
+
+Frontend:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+Backend:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m unittest discover -s tests
 ```
 
 ## API Overview

@@ -24,7 +24,7 @@ export default function NotFound() {
         Trail not found.
       </h1>
       <p className="text-[#555] text-base max-w-xs mb-10">
-        This path doesn't lead anywhere. The park you're looking for may have
+        This path does not lead anywhere. The park you are looking for may have
         moved or never existed.
       </p>
 

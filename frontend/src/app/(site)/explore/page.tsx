@@ -73,7 +73,10 @@ function ExploreContent() {
 
   // Initial load
   useEffect(() => {
-    fetchParks(query, stateCode);
+    const timer = window.setTimeout(() => {
+      fetchParks(query, stateCode);
+    }, 0);
+    return () => window.clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

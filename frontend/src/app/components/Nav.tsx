@@ -90,37 +90,6 @@ export default function Nav() {
     router.push("/");
   };
 
-  const TAB_ITEMS = [
-    {
-      href: "/explore",
-      label: "Explore",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M2 21L8 8l4.5 8L16 10l6 11H2z"/>
-        </svg>
-      ),
-    },
-    {
-      href: "/planner",
-      label: "Plan",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-        </svg>
-      ),
-    },
-    {
-      href: "/journal",
-      label: "Journal",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
-        </svg>
-      ),
-    },
-  ];
-
   return (
     <>
     <nav

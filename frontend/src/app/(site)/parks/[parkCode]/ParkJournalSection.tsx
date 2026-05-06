@@ -32,7 +32,10 @@ export default function ParkJournalSection({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) { setLoading(false); return; }
+    if (!user) {
+      queueMicrotask(() => setLoading(false));
+      return;
+    }
     supabase
       .from("journal_entries")
       .select("id,title,date,rating")

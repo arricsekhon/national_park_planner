@@ -200,10 +200,12 @@ export default function PlannerPage() {
     if (authLoading) return;
 
     if (!user) {
-      const loaded = loadTrips();
-      setTrips(loaded);
-      setActiveId(loaded[0]?.id ?? null);
-      setTripsReady(true);
+      queueMicrotask(() => {
+        const loaded = loadTrips();
+        setTrips(loaded);
+        setActiveId(loaded[0]?.id ?? null);
+        setTripsReady(true);
+      });
       return;
     }
 
@@ -239,14 +241,15 @@ export default function PlannerPage() {
         setActiveId(loaded[0]?.id ?? null);
         setTripsReady(true);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading]);
 
   const activeTrip = trips.find((t) => t.id === activeId) ?? null;
 
   // Auto-switch to editor on mobile when a trip is selected
   useEffect(() => {
-    if (activeId) setMobileTab("editor");
+    if (!activeId) return;
+    const timer = window.setTimeout(() => setMobileTab("editor"), 0);
+    return () => window.clearTimeout(timer);
   }, [activeId]);
 
   const updateTrip = useCallback((updated: Trip) => {
@@ -264,7 +267,6 @@ export default function PlannerPage() {
         notes: updated.notes,
       }).eq("id", updated.id).eq("user_id", user.id);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const newTrip = () => {

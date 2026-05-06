@@ -7,10 +7,6 @@ import { HeroSearchAndStats } from "./HomeActions";
 import NearbySection from "./NearbySection";
 import UserCollection from "./UserCollection";
 
-
-
-const HERO_LABEL = "National Park Planning";
-
 const HERO_PREVIEW_STOPS = [
   { time: "Day 1", title: "Pick the anchor park", detail: "Shortlist views, trails, and overnight options" },
   { time: "Day 2", title: "Shape the route", detail: "Compare drive time, weather, and park fit" },
@@ -84,7 +80,7 @@ async function getFeaturedParks(): Promise<{ parks: Park[]; total: number }> {
 }
 
 export default async function HomePage() {
-  const { parks: featured, total: parkTotal } = await getFeaturedParks();
+  const { parks: featured } = await getFeaturedParks();
   const featureImage = featured[1]?.images?.[0] ?? featured[0]?.images?.[0];
 
   return (
@@ -120,7 +116,7 @@ export default async function HomePage() {
               Move from search to route, packing, and memory keeping with a planning surface that stays quiet.
             </p>
 
-            <HeroSearchAndStats parkCount={parkTotal} />
+            <HeroSearchAndStats />
           </div>
 
           <aside className="animate-hero-4 hidden lg:block">

@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode, AnchorHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
 
 function cx(...classes: Array<string | false | undefined>) {
@@ -130,4 +130,3 @@ export function EmptyState({
     </div>
   );
 }
-

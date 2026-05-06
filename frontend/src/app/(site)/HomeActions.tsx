@@ -6,7 +6,7 @@ import { useState } from "react";
 
 const SEARCH_CHIPS = ["National parks", "California", "Utah", "Colorado", "Montana", "Wyoming", "Alaska"];
 
-export function HeroSearchAndStats({ parkCount: _ }: { parkCount?: number }) {
+export function HeroSearchAndStats() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 

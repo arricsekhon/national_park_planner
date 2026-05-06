@@ -311,15 +311,6 @@ function CompareContent() {
   );
 }
 
-function CompareMobileItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>{label}</dt>
-      <dd className="mt-1 font-medium" style={{ color: "var(--ink)" }}>{value}</dd>
-    </div>
-  );
-}
-
 export default function ComparePage() {
   return (
     <Suspense fallback={

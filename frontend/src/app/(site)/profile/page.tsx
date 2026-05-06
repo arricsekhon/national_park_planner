@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase";
 
 interface JournalEntry { id: string; title: string; date: string; parkName: string; rating: number; }
 interface Trip { id: string; name: string; startDate: string; stops: { parkName: string }[]; }
-interface ParkRating { park_code: string; rating: number; }
+interface ParkRating { park_code: string; stars: number; }
 
 function initials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -64,7 +64,7 @@ export default function ProfilePage() {
       });
 
     supabase.from("park_ratings")
-      .select("park_code,rating")
+      .select("park_code,stars")
       .eq("user_id", user.id)
       .then(({ data }) => {
         if (data) setParkRatings(data as ParkRating[]);

@@ -19,7 +19,10 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX === null) return;
     const delta = touchStartX - e.changedTouches[0].clientX;
-    if (Math.abs(delta) > 40) delta > 0 ? goNext() : goPrev();
+    if (Math.abs(delta) > 40) {
+      if (delta > 0) goNext();
+      else goPrev();
+    }
     setTouchStartX(null);
   };
 
@@ -35,7 +38,11 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
   const handleMouseUp = (e: React.MouseEvent) => {
     if (mouseStartX === null) return;
     const delta = mouseStartX - e.clientX;
-    if (Math.abs(delta) > 40) { delta > 0 ? goNext() : goPrev(); didDragRef.current = true; }
+    if (Math.abs(delta) > 40) {
+      if (delta > 0) goNext();
+      else goPrev();
+      didDragRef.current = true;
+    }
     setMouseStartX(null);
     setDragging(false);
   };

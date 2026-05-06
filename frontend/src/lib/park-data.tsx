@@ -60,20 +60,18 @@ export function ParkDataProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [favorites, setFavorites] = useState<FavoritePark[]>([]);
   const [visitStatus, setVisitStatusMap] = useState<Record<string, "want" | "been">>({});
-  const [compareList, setCompareList] = useState<ComparePark[]>([]);
+  const [compareList, setCompareList] = useState<ComparePark[]>(() => lsLoad<ComparePark[]>(COMPARE_KEY, []));
   const [ratings, setRatingsMap] = useState<Record<string, ParkRating>>({});
-
-  useEffect(() => {
-    setCompareList(lsLoad<ComparePark[]>(COMPARE_KEY, []));
-  }, []);
 
   useEffect(() => {
     if (authLoading) return;
 
     if (!user) {
-      setFavorites(lsLoad<FavoritePark[]>(FAV_LS, []));
-      setVisitStatusMap(lsLoad<Record<string, "want" | "been">>(VISIT_LS, {}));
-      setRatingsMap(lsLoad<Record<string, ParkRating>>(RATINGS_LS, {}));
+      queueMicrotask(() => {
+        setFavorites(lsLoad<FavoritePark[]>(FAV_LS, []));
+        setVisitStatusMap(lsLoad<Record<string, "want" | "been">>(VISIT_LS, {}));
+        setRatingsMap(lsLoad<Record<string, ParkRating>>(RATINGS_LS, {}));
+      });
       return;
     }
 

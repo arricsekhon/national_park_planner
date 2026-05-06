@@ -111,7 +111,6 @@ export default function OnboardingModal() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   // Focus trap — keep Tab/Shift+Tab inside the dialog

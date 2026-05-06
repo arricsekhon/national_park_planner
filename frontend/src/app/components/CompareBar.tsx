@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useParkData } from "@/lib/park-data";
-import { Button } from "./ui";
 
 export default function CompareBar() {
   const { compareList, toggleCompare, clearCompare } = useParkData();
@@ -65,24 +64,28 @@ export default function CompareBar() {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-3">
-            <Button
+          <div className="flex shrink-0 items-center gap-2">
+            <button
               type="button"
               onClick={clearCompare}
-              tone="ghost"
-              className="min-h-10 px-3 text-xs text-white/58 hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-white/58 transition hover:bg-white/10 hover:text-white active:scale-95"
+              aria-label="Clear comparison"
+              title="Clear comparison"
             >
-              Clear
-            </Button>
-            <Button
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+            <button
               type="button"
               onClick={handleCompare}
               disabled={compareList.length < 2}
-              className="min-h-10 flex-1 px-5 sm:flex-none"
+              className="min-h-10 flex-1 rounded-lg px-5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-50 sm:flex-none"
               style={{ background: "var(--accent)" }}
             >
               Compare {compareList.length} parks
-            </Button>
+            </button>
           </div>
         </div>
       </aside>

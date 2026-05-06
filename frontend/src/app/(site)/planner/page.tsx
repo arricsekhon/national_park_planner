@@ -10,6 +10,7 @@ const TripMap = dynamic(() => import("./TripMap"), { ssr: false });
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/lib/toast";
+import { SyncNotice } from "@/app/components/ui";
 
 interface TripStop {
   id: string;
@@ -451,12 +452,7 @@ export default function PlannerPage() {
       }}
     >
       {!user && (
-        <div className="mx-auto max-w-[1540px] px-4 pt-4">
-          <div className="flex items-center justify-between gap-4 rounded-xl px-4 py-3 text-sm" style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)", color: "var(--accent)" }}>
-            <span className="font-medium">Sign in to save your trips to the cloud.</span>
-            <Link href="/auth/signin" className="font-semibold underline underline-offset-2 shrink-0">Sign in</Link>
-          </div>
-        </div>
+        <SyncNotice>Sign in to sync trips across devices.</SyncNotice>
       )}
       {/* Mobile tab toggle */}
       <div className="flex lg:hidden border-b" style={{ background: "white", borderColor: "var(--line)" }}>
@@ -490,7 +486,7 @@ export default function PlannerPage() {
                 Trip Studio
               </h1>
               <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-                {trips.length} {trips.length === 1 ? "trip" : "trips"} saved locally
+                {trips.length} {trips.length === 1 ? "trip" : "trips"} {user ? "synced" : "saved locally"}
               </p>
             </div>
             <button
@@ -881,7 +877,7 @@ export default function PlannerPage() {
                                         ))}
                                         {tip && (
                                           <p className="mt-1 rounded-md px-2.5 py-1.5 text-xs leading-5" style={{ background: "rgba(23,109,101,0.07)", color: "var(--accent)" }}>
-                                            💡 {tip}
+                                            Tip: {tip}
                                           </p>
                                         )}
                                       </div>

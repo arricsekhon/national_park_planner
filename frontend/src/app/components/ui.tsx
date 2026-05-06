@@ -130,3 +130,49 @@ export function EmptyState({
     </div>
   );
 }
+
+export function SyncNotice({
+  children,
+  href = "/auth/signin",
+  action = "Sign in",
+}: {
+  children: ReactNode;
+  href?: string;
+  action?: string;
+}) {
+  return (
+    <div className="mx-auto max-w-[1540px] px-4 pt-4">
+      <div
+        className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm sm:px-4"
+        style={{
+          background: "rgba(255,255,255,0.78)",
+          borderColor: "rgba(23,109,101,0.18)",
+          boxShadow: "0 10px 28px rgba(17,19,21,0.05)",
+          color: "var(--ink-soft)",
+        }}
+      >
+        <span className="flex min-w-0 items-center gap-2 font-medium">
+          <span
+            aria-hidden="true"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+            style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v12" />
+              <path d="m8 11 4 4 4-4" />
+              <path d="M20 17.5A3.5 3.5 0 0 1 16.5 21h-9A3.5 3.5 0 0 1 4 17.5" />
+            </svg>
+          </span>
+          <span className="truncate">{children}</span>
+        </span>
+        <Link
+          href={href}
+          className="shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition hover:bg-[var(--accent-soft)]"
+          style={{ color: "var(--accent)" }}
+        >
+          {action}
+        </Link>
+      </div>
+    </div>
+  );
+}

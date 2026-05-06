@@ -2,11 +2,11 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { searchParks, type Park } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/lib/toast";
+import { SyncNotice } from "@/app/components/ui";
 
 interface JournalEntry {
   id: string;
@@ -207,12 +207,7 @@ function JournalContent() {
   return (
     <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       {!user && (
-        <div className="mx-auto max-w-[1540px] px-4 pt-4">
-          <div className="flex items-center justify-between gap-4 rounded-xl px-4 py-3 text-sm" style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)", color: "var(--accent)" }}>
-            <span className="font-medium">Sign in to sync your journal across devices.</span>
-            <Link href="/auth/signin" className="font-semibold underline underline-offset-2 shrink-0">Sign in</Link>
-          </div>
-        </div>
+        <SyncNotice>Sign in to sync journal entries across devices.</SyncNotice>
       )}
       {/* Mobile tab toggle */}
       <div className="flex lg:hidden border-b" style={{ background: "white", borderColor: "var(--line)" }}>
@@ -224,7 +219,7 @@ function JournalContent() {
             className="flex-1 py-3.5 text-sm font-semibold relative transition-colors"
             style={{ color: mobileTab === tab ? "var(--ink)" : "var(--muted)" }}
           >
-            {tab === "browse" ? "Archive" : `Entries (${entries.length})`}
+            {tab === "browse" ? "Browse" : `Entries (${entries.length})`}
             {mobileTab === tab && (
               <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full" style={{ background: "var(--accent)" }} />
             )}

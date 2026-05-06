@@ -190,7 +190,7 @@ function ExploreContent() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search parks, states, trails, wildlife, camping..."
-                className="min-h-12 w-full rounded-full border px-5 pr-11 text-[15px] font-medium shadow-none transition-all sm:min-h-14"
+                className="min-h-12 w-full rounded-full border px-5 pr-16 text-[15px] font-medium shadow-none transition-all sm:min-h-14"
                 style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
               />
               {query && (
@@ -206,7 +206,7 @@ function ExploreContent() {
               )}
               {loading && (
                 <svg
-                  className="animate-spin absolute right-4 top-1/2 -translate-y-1/2"
+                  className={`animate-spin absolute top-1/2 -translate-y-1/2 ${query ? "right-10" : "right-4"}`}
                   width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5"
                 >
                   <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.25"/>
@@ -274,6 +274,7 @@ function ExploreContent() {
 
               {/* Designation toggle */}
               <button
+                type="button"
                 onClick={() => setNpOnly((v) => !v)}
                 className="shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all active:scale-95"
                 style={{
@@ -294,6 +295,7 @@ function ExploreContent() {
               <span className="w-px self-stretch mx-1" style={{ background: "var(--line)" }} aria-hidden="true" />
 
               <button
+                type="button"
                 onClick={() => setActivityFilter("")}
                 className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all active:scale-95"
                 style={{
@@ -306,6 +308,7 @@ function ExploreContent() {
               </button>
               {ACTIVITY_FILTERS.map((act) => (
                 <button
+                  type="button"
                   key={act}
                   onClick={() => setActivityFilter(activityFilter === act ? "" : act)}
                   className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:-translate-y-0.5 active:scale-95"

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ParkDataProvider } from "@/lib/park-data";
@@ -84,6 +85,7 @@ export default function RootLayout({
           <ParkDataProvider>
             <ToastProvider>
               {children}
+              <Analytics />
             </ToastProvider>
           </ParkDataProvider>
         </AuthProvider>

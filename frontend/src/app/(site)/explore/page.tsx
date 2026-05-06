@@ -561,9 +561,6 @@ function ParkListCard({
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "rgba(169,111,45,0.1)", color: "var(--amber)" }}>
-              {park.states || "NPS"}
-            </span>
             {fee && (
               <span className="rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
                 {parseFloat(fee.cost) === 0 ? "Free entry" : `$${fee.cost} entry`}

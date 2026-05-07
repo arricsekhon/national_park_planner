@@ -85,6 +85,7 @@ export default function Nav() {
   const onHero = transparent;
   const signInActive = pathname.startsWith("/auth/signin");
   const signUpActive = pathname.startsWith("/auth/signup");
+  const isAuthPage = pathname.startsWith("/auth/");
 
   const handleSignOut = () => {
     signOut();
@@ -127,6 +128,37 @@ export default function Nav() {
           </span>
         </Link>
 
+        {isAuthPage ? (
+          <div
+            className="hidden md:flex items-center gap-1 rounded-full px-1.5 py-1.5"
+            style={{
+              background: "rgba(17,19,21,0.04)",
+              border: "1px solid rgba(17,19,21,0.06)",
+            }}
+          >
+            <Link
+              href="/auth/signin"
+              className="px-4 py-2 text-sm font-semibold transition-colors rounded-full"
+              style={{
+                color: signInActive ? "white" : "rgba(17,19,21,0.68)",
+                background: signInActive ? "var(--ink)" : "transparent",
+              }}
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/auth/signup"
+              className="px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95"
+              style={{
+                color: signUpActive ? "white" : "rgba(17,19,21,0.68)",
+                background: signUpActive ? "var(--ink)" : "transparent",
+              }}
+            >
+              Sign up
+            </Link>
+          </div>
+        ) : (
+        <>
         {/* Desktop nav */}
         <div
           className="hidden md:flex items-center gap-1 rounded-full px-1.5 py-1.5"
@@ -259,6 +291,8 @@ export default function Nav() {
             </div>
           )}
         </div>
+        </>
+        )}
 
         {/* Mobile hamburger */}
         <button

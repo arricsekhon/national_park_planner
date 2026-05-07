@@ -75,8 +75,8 @@ export function MobileAuthAccent({
 
 function ReturningVisual() {
   return (
-    <div className="w-full max-w-[620px] rounded-xl border border-white/16 bg-white/10 p-5 backdrop-blur-xl" style={{ boxShadow: "0 30px 90px rgba(0,0,0,0.18)" }}>
-      <div className="mb-5 flex items-center justify-between">
+    <div className="w-full max-w-[560px] rounded-xl border border-white/16 bg-white/10 p-4 backdrop-blur-xl" style={{ boxShadow: "0 24px 70px rgba(0,0,0,0.16)" }}>
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/52">Saved route</p>
           <p className="mt-1 text-lg font-semibold text-white">Alpine loop</p>
@@ -84,7 +84,7 @@ function ReturningVisual() {
         <span className="rounded-md border border-white/14 bg-white/12 px-3 py-1 text-xs font-semibold text-white/70">Day 2</span>
       </div>
 
-      <div className="relative h-44 overflow-hidden rounded-xl border border-white/14 bg-[rgba(255,255,255,0.08)]">
+      <div className="relative h-40 overflow-hidden rounded-xl border border-white/14 bg-[rgba(255,255,255,0.08)]">
         <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(90deg,rgba(255,255,255,0.11)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.11)_1px,transparent_1px)] [background-size:36px_36px]" />
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 480 176" fill="none" aria-hidden="true">
           <path
@@ -123,7 +123,7 @@ function ReturningVisual() {
 
 function StartingVisual() {
   return (
-    <div className="w-full max-w-[620px] rounded-xl border border-white/18 bg-white/10 p-5 backdrop-blur-xl" style={{ boxShadow: "0 30px 90px rgba(0,0,0,0.18)" }}>
+    <div className="w-full max-w-[560px] rounded-xl border border-white/18 bg-white/10 p-4 backdrop-blur-xl" style={{ boxShadow: "0 24px 70px rgba(0,0,0,0.16)" }}>
       <div className="grid grid-cols-[1fr_0.75fr] gap-3">
         <div className="rounded-lg border border-white/16 bg-white/14 p-4">
           <div className="mb-5 flex items-center justify-between">

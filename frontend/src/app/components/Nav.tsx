@@ -83,6 +83,8 @@ export default function Nav() {
 
   const transparent = isHome && !scrolled;
   const onHero = transparent;
+  const signInActive = pathname.startsWith("/auth/signin");
+  const signUpActive = pathname.startsWith("/auth/signup");
 
   const handleSignOut = () => {
     signOut();
@@ -235,14 +237,20 @@ export default function Nav() {
                   <Link
                     href="/auth/signin"
                     className="px-4 py-2 text-sm font-medium transition-colors rounded-full hover:bg-white/10"
-                    style={{ color: onHero ? "rgba(255,255,255,0.82)" : "rgba(17,19,21,0.68)" }}
+                    style={{
+                      color: signInActive ? (onHero ? "var(--ink)" : "white") : (onHero ? "rgba(255,255,255,0.82)" : "rgba(17,19,21,0.68)"),
+                      background: signInActive ? (onHero ? "rgba(255,255,255,0.86)" : "var(--ink)") : "transparent",
+                    }}
                   >
                     Sign in
                   </Link>
                   <Link
                     href="/auth/signup"
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 ${onHero ? "" : "btn-ink"}`}
-                    style={onHero ? { background: "white", color: "var(--ink)" } : undefined}
+                    className="px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 hover:bg-white/10"
+                    style={{
+                      color: signUpActive ? (onHero ? "var(--ink)" : "white") : (onHero ? "rgba(255,255,255,0.82)" : "rgba(17,19,21,0.68)"),
+                      background: signUpActive ? (onHero ? "rgba(255,255,255,0.86)" : "var(--ink)") : "transparent",
+                    }}
                   >
                     Sign up
                   </Link>

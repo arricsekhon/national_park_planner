@@ -64,8 +64,8 @@ export default function SignInPage() {
           <label htmlFor={emailId} className="block text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
             Email address
           </label>
-          <span className="relative mt-2 block">
-            <AuthIcon name="mail" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <span className="group relative mt-2 block">
+            <AuthIcon name="mail" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-[var(--accent)]" />
             <input
               id={emailId}
               type="email"
@@ -76,8 +76,8 @@ export default function SignInPage() {
               placeholder="you@example.com"
               aria-invalid={Boolean(error)}
               aria-describedby={error ? errorId : undefined}
-              className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none"
-              style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
+              className="w-full rounded-lg border py-3.5 pl-10 pr-3 text-sm font-medium outline-none transition"
+              style={{ borderColor: "var(--line)", color: "var(--ink)", background: "linear-gradient(180deg,#fff,#fbfbf8)" }}
             />
           </span>
         </div>
@@ -86,8 +86,8 @@ export default function SignInPage() {
           <label htmlFor={passwordId} className="block text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
             Password
           </label>
-          <span className="relative mt-2 block">
-            <AuthIcon name="lock" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <span className="group relative mt-2 block">
+            <AuthIcon name="lock" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-[var(--accent)]" />
             <input
               id={passwordId}
               type={showPassword ? "text" : "password"}
@@ -98,8 +98,8 @@ export default function SignInPage() {
               placeholder="Enter your password"
               aria-invalid={Boolean(error)}
               aria-describedby={error ? errorId : undefined}
-              className="w-full rounded-lg border py-3 pl-10 pr-12 text-sm font-medium outline-none"
-              style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
+              className="w-full rounded-lg border py-3.5 pl-10 pr-12 text-sm font-medium outline-none transition"
+              style={{ borderColor: "var(--line)", color: "var(--ink)", background: "linear-gradient(180deg,#fff,#fbfbf8)" }}
             />
             <button
               type="button"
@@ -114,6 +114,14 @@ export default function SignInPage() {
           </span>
         </div>
 
+        <div className="flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs font-semibold" style={{ borderColor: "rgba(23,109,101,0.14)", background: "var(--accent-soft)", color: "var(--accent)" }}>
+          <span className="inline-flex items-center gap-2">
+            <AuthIcon name="shield" className="h-4 w-4" />
+            Secure Supabase sign-in
+          </span>
+          <span style={{ color: "var(--muted-strong)" }}>No spam</span>
+        </div>
+
         {error && (
           <div id={errorId} role="alert" className="rounded-lg border px-3 py-3 text-sm" style={{ background: "#fef2f2", borderColor: "rgba(185,28,28,0.18)", color: "#b91c1c" }}>
             {error}
@@ -124,8 +132,8 @@ export default function SignInPage() {
           type="submit"
           disabled={loading}
           aria-busy={loading}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:translate-y-0 disabled:opacity-50"
-          style={{ background: "var(--ink)", boxShadow: "0 12px 26px rgba(17,19,21,0.16)" }}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:translate-y-0 disabled:opacity-50"
+          style={{ background: "linear-gradient(135deg,var(--ink),#263237)", boxShadow: "0 16px 34px rgba(17,19,21,0.18)" }}
         >
           {loading ? "Signing in..." : "Sign in"}
           <AuthIcon name="arrowRight" className="h-4 w-4" />

@@ -51,11 +51,13 @@ export function MobileAuthAccent({
 }) {
   return (
     <section
-      className="mb-4 overflow-hidden rounded-lg border p-4 text-white lg:hidden"
+      className="relative mb-4 overflow-hidden rounded-xl border p-4 text-white lg:hidden"
       style={{ background: visual.panel, borderColor: "rgba(17,19,21,0.1)", boxShadow: "var(--shadow-sm)" }}
       aria-label={eyebrow}
     >
-      <div className="flex items-start gap-3">
+      <div className="absolute inset-0 opacity-35" style={{ backgroundImage: visual.overlay, backgroundSize: "32px 32px" }} />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_86%_0%,rgba(255,255,255,0.18),transparent_12rem)]" />
+      <div className="relative flex items-start gap-3">
         <span
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/16"
           style={{ background: visual.markBackground }}
@@ -73,7 +75,7 @@ export function MobileAuthAccent({
 
 function ReturningVisual() {
   return (
-    <div className="w-full max-w-[620px] rounded-lg border border-white/16 bg-white/10 p-5 backdrop-blur-xl">
+    <div className="w-full max-w-[620px] rounded-xl border border-white/16 bg-white/10 p-5 backdrop-blur-xl" style={{ boxShadow: "0 30px 90px rgba(0,0,0,0.18)" }}>
       <div className="mb-5 flex items-center justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/52">Saved route</p>
@@ -82,7 +84,7 @@ function ReturningVisual() {
         <span className="rounded-md border border-white/14 bg-white/12 px-3 py-1 text-xs font-semibold text-white/70">Day 2</span>
       </div>
 
-      <div className="relative h-44 overflow-hidden rounded-lg border border-white/14 bg-[rgba(255,255,255,0.08)]">
+      <div className="relative h-44 overflow-hidden rounded-xl border border-white/14 bg-[rgba(255,255,255,0.08)]">
         <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(90deg,rgba(255,255,255,0.11)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.11)_1px,transparent_1px)] [background-size:36px_36px]" />
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 480 176" fill="none" aria-hidden="true">
           <path
@@ -121,7 +123,7 @@ function ReturningVisual() {
 
 function StartingVisual() {
   return (
-    <div className="w-full max-w-[620px] rounded-lg border border-white/18 bg-white/10 p-5 backdrop-blur-xl">
+    <div className="w-full max-w-[620px] rounded-xl border border-white/18 bg-white/10 p-5 backdrop-blur-xl" style={{ boxShadow: "0 30px 90px rgba(0,0,0,0.18)" }}>
       <div className="grid grid-cols-[1fr_0.75fr] gap-3">
         <div className="rounded-lg border border-white/16 bg-white/14 p-4">
           <div className="mb-5 flex items-center justify-between">

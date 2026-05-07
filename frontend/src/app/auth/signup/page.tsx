@@ -85,8 +85,8 @@ export default function SignUpPage() {
           <label htmlFor={nameId} className="block text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
             Full name
           </label>
-          <span className="relative mt-2 block">
-            <AuthIcon name="user" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <span className="group relative mt-2 block">
+            <AuthIcon name="user" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-[var(--accent)]" />
             <input
               id={nameId}
               type="text"
@@ -97,8 +97,8 @@ export default function SignUpPage() {
               placeholder="Jane Smith"
               aria-invalid={error === "Enter your full name."}
               aria-describedby={error ? errorId : undefined}
-              className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none"
-              style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
+              className="w-full rounded-lg border py-3.5 pl-10 pr-3 text-sm font-medium outline-none transition"
+              style={{ borderColor: "var(--line)", color: "var(--ink)", background: "linear-gradient(180deg,#fff,#fbfbf8)" }}
             />
           </span>
         </div>
@@ -107,8 +107,8 @@ export default function SignUpPage() {
           <label htmlFor={emailId} className="block text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
             Email address
           </label>
-          <span className="relative mt-2 block">
-            <AuthIcon name="mail" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <span className="group relative mt-2 block">
+            <AuthIcon name="mail" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-[var(--accent)]" />
             <input
               id={emailId}
               type="email"
@@ -119,8 +119,8 @@ export default function SignUpPage() {
               placeholder="you@example.com"
               aria-invalid={Boolean(error && error !== "Enter your full name." && !error.includes("Password"))}
               aria-describedby={error ? errorId : undefined}
-              className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none"
-              style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
+              className="w-full rounded-lg border py-3.5 pl-10 pr-3 text-sm font-medium outline-none transition"
+              style={{ borderColor: "var(--line)", color: "var(--ink)", background: "linear-gradient(180deg,#fff,#fbfbf8)" }}
             />
           </span>
         </div>
@@ -129,8 +129,8 @@ export default function SignUpPage() {
           <label htmlFor={passwordId} className="block text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
             Password
           </label>
-          <span className="relative mt-2 block">
-            <AuthIcon name="lock" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <span className="group relative mt-2 block">
+            <AuthIcon name="lock" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-[var(--accent)]" />
             <input
               id={passwordId}
               type={showPassword ? "text" : "password"}
@@ -141,11 +141,11 @@ export default function SignUpPage() {
               placeholder="At least 6 characters"
               aria-invalid={Boolean(password && !passwordLongEnough)}
               aria-describedby={`${rulesId}${error ? ` ${errorId}` : ""}`}
-              className="w-full rounded-lg border py-3 pl-10 pr-12 text-sm font-medium outline-none"
+              className="w-full rounded-lg border py-3.5 pl-10 pr-12 text-sm font-medium outline-none transition"
               style={{
                 borderColor: password && !passwordLongEnough ? "rgba(185,28,28,0.36)" : "var(--line)",
                 color: "var(--ink)",
-                background: "white",
+                background: "linear-gradient(180deg,#fff,#fbfbf8)",
               }}
             />
             <button
@@ -165,8 +165,8 @@ export default function SignUpPage() {
           <label htmlFor={confirmId} className="block text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
             Confirm password
           </label>
-          <span className="relative mt-2 block">
-            <AuthIcon name="shield" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <span className="group relative mt-2 block">
+            <AuthIcon name="shield" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-[var(--accent)]" />
             <input
               id={confirmId}
               type={showPassword ? "text" : "password"}
@@ -177,17 +177,17 @@ export default function SignUpPage() {
               placeholder="Repeat password"
               aria-invalid={Boolean(confirm && !passwordsMatch)}
               aria-describedby={`${rulesId}${error ? ` ${errorId}` : ""}`}
-              className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none"
+              className="w-full rounded-lg border py-3.5 pl-10 pr-3 text-sm font-medium outline-none transition"
               style={{
                 borderColor: confirm && !passwordsMatch ? "rgba(185,28,28,0.36)" : "var(--line)",
                 color: "var(--ink)",
-                background: "white",
+                background: "linear-gradient(180deg,#fff,#fbfbf8)",
               }}
             />
           </span>
         </div>
 
-        <div id={rulesId} aria-live="polite" className="grid gap-2 rounded-lg border p-3" style={{ borderColor: "var(--line)", background: "var(--surface)" }}>
+        <div id={rulesId} aria-live="polite" className="grid gap-2 rounded-lg border p-3" style={{ borderColor: "rgba(23,109,101,0.14)", background: "linear-gradient(180deg,var(--surface),#fff)" }}>
           <PasswordRule active={passwordLongEnough} label="At least 6 characters" />
           <PasswordRule active={Boolean(confirm) && password === confirm} label="Passwords match" muted={!confirm} />
         </div>
@@ -202,8 +202,8 @@ export default function SignUpPage() {
           type="submit"
           disabled={loading}
           aria-busy={loading}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:translate-y-0 disabled:opacity-50"
-          style={{ background: "var(--ink)", boxShadow: "0 12px 26px rgba(17,19,21,0.16)" }}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:translate-y-0 disabled:opacity-50"
+          style={{ background: "linear-gradient(135deg,var(--ink),#263237)", boxShadow: "0 16px 34px rgba(17,19,21,0.18)" }}
         >
           {loading ? "Creating account..." : "Create account"}
           <AuthIcon name="arrowRight" className="h-4 w-4" />

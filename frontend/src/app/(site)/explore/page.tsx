@@ -37,6 +37,7 @@ function ExploreContent() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [nearMeLoading, setNearMeLoading] = useState(false);
   const [nearMeError, setNearMeError] = useState("");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const requestIdRef = useRef(0);
 
   const fetchParks = useCallback(async (q: string, state: string, limit = 50) => {
@@ -155,12 +156,14 @@ function ExploreContent() {
   const npCount = parks.filter((p) => p.designation === "National Park").length;
   const hasActiveFilters = Boolean(query || stateCode || activityFilter || npOnly || userLocation);
   const activeFilterCount = [query, stateCode, activityFilter, npOnly, userLocation].filter(Boolean).length;
+  const sheetFilterCount = [stateCode, activityFilter, npOnly].filter(Boolean).length;
   const clearFilters = () => {
     setQuery("");
     setStateCode("");
     setActivityFilter("");
     setNpOnly(false);
     setUserLocation(null);
+    setFilterSheetOpen(false);
     void fetchParks("", "");
   };
   const resultText = userLocation
@@ -175,7 +178,7 @@ function ExploreContent() {
     <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       <div className="mx-auto flex min-h-[calc(100vh-66px)] max-w-[1680px] flex-col px-4 py-4 sm:px-6">
         <section
-          className="relative z-20 mb-4 overflow-hidden rounded-[2.2rem] border p-4 sm:p-5"
+          className="relative z-20 mb-4 overflow-hidden rounded-[1.75rem] border p-3 sm:rounded-[2.2rem] sm:p-5"
           style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.78)", boxShadow: "var(--shadow-card)", backdropFilter: "blur(24px) saturate(145%)" }}
         >
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_10%,rgba(220,233,243,0.8),transparent_24rem),radial-gradient(circle_at_88%_20%,rgba(229,242,239,0.9),transparent_26rem)]" />
@@ -199,7 +202,7 @@ function ExploreContent() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search parks, states, trails, wildlife, camping..."
+                placeholder="Search parks, trails, wildlife..."
                 className="min-h-12 w-full rounded-full border px-5 pr-16 text-[15px] font-medium shadow-none transition-all sm:min-h-14"
                 style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
               />
@@ -225,12 +228,12 @@ function ExploreContent() {
               )}
             </div>
 
-            {/* On mobile: flex row — select gets most space, button gets minimum. On lg: contents → grid children. */}
+            {/* On mobile, detailed filters live in the sheet. On larger screens, state stays inline. */}
             <div className="flex gap-2.5 lg:contents">
               <select
                 value={stateCode}
                 onChange={(e) => setStateCode(e.target.value)}
-                className="min-h-12 w-36 min-w-0 flex-none rounded-full border px-4 text-sm font-semibold shadow-none sm:min-h-14 sm:w-44 lg:w-auto"
+                className="hidden min-h-12 w-36 min-w-0 flex-none rounded-full border px-4 text-sm font-semibold shadow-none sm:block sm:min-h-14 sm:w-44 lg:w-auto"
                 style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
               >
                 {US_STATES.map(([code, name]) => (
@@ -245,11 +248,36 @@ function ExploreContent() {
               >
                 Search
               </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterSheetOpen(true)}
+                className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition active:scale-95 sm:hidden"
+                style={{ background: "rgba(255,255,255,0.78)", borderColor: "var(--line)", color: "var(--ink)" }}
+                aria-haspopup="dialog"
+                aria-expanded={filterSheetOpen}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                  <path d="M4 6h16" />
+                  <path d="M7 12h10" />
+                  <path d="M10 18h4" />
+                </svg>
+                Filters
+                {sheetFilterCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white" style={{ background: "var(--accent)" }}>
+                    {sheetFilterCount}
+                  </span>
+                )}
+              </button>
             </div>
           </form>
 
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative">
+            <p className="order-first shrink-0 text-xs font-semibold uppercase tracking-[0.16em] lg:order-last" style={{ color: "var(--muted)" }}>
+              {loading ? "Searching..." : resultText}
+            </p>
+
+            <div className="relative lg:order-first">
             <div className="flex gap-1.5 overflow-x-auto pb-1 pr-10 [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
               {/* Near me chip */}
               <button
@@ -280,13 +308,13 @@ function ExploreContent() {
                 {userLocation ? "Clear location" : "Near me"}
               </button>
 
-              <span className="w-px self-stretch mx-1" style={{ background: "var(--line)" }} aria-hidden="true" />
+              <span className="mx-1 hidden w-px self-stretch sm:block" style={{ background: "var(--line)" }} aria-hidden="true" />
 
               {/* Designation toggle */}
               <button
                 type="button"
                 onClick={() => setNpOnly((v) => !v)}
-                className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 sm:px-4"
+                className="hidden shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 sm:flex sm:px-4"
                 style={{
                   background: npOnly ? "#a96f2d" : "rgba(255,255,255,0.7)",
                   color: npOnly ? "white" : "var(--muted)",
@@ -302,12 +330,12 @@ function ExploreContent() {
                 National Parks only
               </button>
 
-              <span className="w-px self-stretch mx-1" style={{ background: "var(--line)" }} aria-hidden="true" />
+              <span className="mx-1 hidden w-px self-stretch sm:block" style={{ background: "var(--line)" }} aria-hidden="true" />
 
               <button
                 type="button"
                 onClick={() => setActivityFilter("")}
-                className="shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 sm:px-4"
+                className="hidden shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 sm:block sm:px-4"
                 style={{
                   background: activityFilter === "" ? "var(--ink)" : "rgba(255,255,255,0.7)",
                   color: activityFilter === "" ? "white" : "var(--muted)",
@@ -321,7 +349,7 @@ function ExploreContent() {
                   type="button"
                   key={act}
                   onClick={() => setActivityFilter(activityFilter === act ? "" : act)}
-                  className="shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all hover:-translate-y-0.5 active:scale-95 sm:px-4"
+                  className="hidden shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all hover:-translate-y-0.5 active:scale-95 sm:block sm:px-4"
                   style={{
                     background: activityFilter === act ? "var(--accent)" : "rgba(255,255,255,0.7)",
                     color: activityFilter === act ? "white" : "var(--muted)",
@@ -338,10 +366,6 @@ function ExploreContent() {
             {nearMeError && (
               <p className="mt-1.5 text-xs font-medium" style={{ color: "#dc2626" }}>{nearMeError}</p>
             )}
-
-            <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
-              {loading ? "Searching..." : resultText}
-            </p>
           </div>
 
           {hasActiveFilters && (
@@ -364,6 +388,106 @@ function ExploreContent() {
               >
                 Reset view
               </button>
+            </div>
+          )}
+
+          {filterSheetOpen && (
+            <div className="fixed inset-0 z-50 sm:hidden" role="dialog" aria-modal="true" aria-label="Explore filters">
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/35"
+                onClick={() => setFilterSheetOpen(false)}
+                aria-label="Close filters"
+              />
+              <div
+                className="absolute inset-x-0 bottom-0 rounded-t-[1.75rem] border px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-4 shadow-2xl"
+                style={{ background: "var(--surface)", borderColor: "rgba(255,255,255,0.82)" }}
+              >
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>Filters</p>
+                    <h2 className="mt-1 text-xl font-semibold" style={{ color: "var(--ink)" }}>Refine results</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFilterSheetOpen(false)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border bg-white text-lg leading-none"
+                    style={{ borderColor: "var(--line)", color: "var(--muted)" }}
+                    aria-label="Close filters"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="grid gap-3">
+                  <label className="grid gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>State</span>
+                    <select
+                      value={stateCode}
+                      onChange={(e) => setStateCode(e.target.value)}
+                      className="min-h-12 rounded-xl border px-4 text-sm font-semibold"
+                      style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
+                    >
+                      {US_STATES.map(([code, name]) => (
+                        <option key={code} value={code}>{name}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>Activity</span>
+                    <select
+                      value={activityFilter}
+                      onChange={(e) => setActivityFilter(e.target.value)}
+                      className="min-h-12 rounded-xl border px-4 text-sm font-semibold"
+                      style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
+                    >
+                      <option value="">All activities</option>
+                      {ACTIVITY_FILTERS.map((act) => (
+                        <option key={act} value={act}>{act}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => setNpOnly((value) => !value)}
+                    className="flex min-h-12 items-center justify-between rounded-xl border px-4 text-left text-sm font-semibold"
+                    style={{
+                      background: npOnly ? "rgba(169,111,45,0.12)" : "white",
+                      borderColor: npOnly ? "rgba(169,111,45,0.32)" : "var(--line)",
+                      color: npOnly ? "var(--amber)" : "var(--ink)",
+                    }}
+                  >
+                    <span>National Parks only</span>
+                    <span
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-white"
+                      style={{ background: npOnly ? "var(--amber)" : "rgba(17,19,21,0.14)" }}
+                    >
+                      {npOnly ? "✓" : ""}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="min-h-12 rounded-full border px-4 text-sm font-semibold"
+                    style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterSheetOpen(false)}
+                    className="min-h-12 rounded-full px-4 text-sm font-semibold text-white"
+                    style={{ background: "var(--ink)" }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </section>

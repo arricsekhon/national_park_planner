@@ -391,106 +391,107 @@ function ExploreContent() {
             </div>
           )}
 
-          {filterSheetOpen && (
-            <div className="fixed inset-0 z-50 sm:hidden" role="dialog" aria-modal="true" aria-label="Explore filters">
-              <button
-                type="button"
-                className="absolute inset-0 bg-black/35"
-                onClick={() => setFilterSheetOpen(false)}
-                aria-label="Close filters"
-              />
-              <div
-                className="absolute inset-x-0 bottom-0 rounded-t-[1.75rem] border px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-8 shadow-2xl"
-                style={{ background: "var(--surface)", borderColor: "rgba(255,255,255,0.82)" }}
-              >
-                <div className="mb-4 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>Filters</p>
-                    <h2 className="mt-1 text-xl font-semibold" style={{ color: "var(--ink)" }}>Refine results</h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setFilterSheetOpen(false)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border bg-white text-lg leading-none"
-                    style={{ borderColor: "var(--line)", color: "var(--muted)" }}
-                    aria-label="Close filters"
-                  >
-                    ×
-                  </button>
+        </section>
+
+        {filterSheetOpen && (
+          <div className="fixed inset-0 z-50 sm:hidden" role="dialog" aria-modal="true" aria-label="Explore filters">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/35"
+              onClick={() => setFilterSheetOpen(false)}
+              aria-label="Close filters"
+            />
+            <div
+              className="absolute inset-x-0 bottom-0 rounded-t-[1.75rem] border px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-6 shadow-2xl"
+              style={{ background: "var(--surface)", borderColor: "rgba(255,255,255,0.82)" }}
+            >
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>Filters</p>
+                  <h2 className="mt-1 text-xl font-semibold" style={{ color: "var(--ink)" }}>Refine results</h2>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setFilterSheetOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border bg-white text-lg leading-none"
+                  style={{ borderColor: "var(--line)", color: "var(--muted)" }}
+                  aria-label="Close filters"
+                >
+                  ×
+                </button>
+              </div>
 
-                <div className="grid gap-3">
-                  <label className="grid gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>State</span>
-                    <select
-                      value={stateCode}
-                      onChange={(e) => setStateCode(e.target.value)}
-                      className="min-h-12 rounded-xl border px-4 text-sm font-semibold"
-                      style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
-                    >
-                      {US_STATES.map(([code, name]) => (
-                        <option key={code} value={code}>{name}</option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>Activity</span>
-                    <select
-                      value={activityFilter}
-                      onChange={(e) => setActivityFilter(e.target.value)}
-                      className="min-h-12 rounded-xl border px-4 text-sm font-semibold"
-                      style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
-                    >
-                      <option value="">All activities</option>
-                      {ACTIVITY_FILTERS.map((act) => (
-                        <option key={act} value={act}>{act}</option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => setNpOnly((value) => !value)}
-                    className="flex min-h-12 items-center justify-between rounded-xl border px-4 text-left text-sm font-semibold"
-                    style={{
-                      background: npOnly ? "rgba(169,111,45,0.12)" : "white",
-                      borderColor: npOnly ? "rgba(169,111,45,0.32)" : "var(--line)",
-                      color: npOnly ? "var(--amber)" : "var(--ink)",
-                    }}
-                  >
-                    <span>National Parks only</span>
-                    <span
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-white"
-                      style={{ background: npOnly ? "var(--amber)" : "rgba(17,19,21,0.14)" }}
-                    >
-                      {npOnly ? "✓" : ""}
-                    </span>
-                  </button>
-                </div>
-
-                <div className="mt-5 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="min-h-12 rounded-full border px-4 text-sm font-semibold"
+              <div className="grid gap-3">
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>State</span>
+                  <select
+                    value={stateCode}
+                    onChange={(e) => setStateCode(e.target.value)}
+                    className="min-h-12 rounded-xl border px-4 text-sm font-semibold"
                     style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
-                    Reset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilterSheetOpen(false)}
-                    className="min-h-12 rounded-full px-4 text-sm font-semibold text-white"
-                    style={{ background: "var(--ink)" }}
+                    {US_STATES.map(([code, name]) => (
+                      <option key={code} value={code}>{name}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>Activity</span>
+                  <select
+                    value={activityFilter}
+                    onChange={(e) => setActivityFilter(e.target.value)}
+                    className="min-h-12 rounded-xl border px-4 text-sm font-semibold"
+                    style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
-                    Apply
-                  </button>
-                </div>
+                    <option value="">All activities</option>
+                    {ACTIVITY_FILTERS.map((act) => (
+                      <option key={act} value={act}>{act}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setNpOnly((value) => !value)}
+                  className="flex min-h-12 items-center justify-between rounded-xl border px-4 text-left text-sm font-semibold"
+                  style={{
+                    background: npOnly ? "rgba(169,111,45,0.12)" : "white",
+                    borderColor: npOnly ? "rgba(169,111,45,0.32)" : "var(--line)",
+                    color: npOnly ? "var(--amber)" : "var(--ink)",
+                  }}
+                >
+                  <span>National Parks only</span>
+                  <span
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-white"
+                    style={{ background: npOnly ? "var(--amber)" : "rgba(17,19,21,0.14)" }}
+                  >
+                    {npOnly ? "✓" : ""}
+                  </span>
+                </button>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="min-h-12 rounded-full border px-4 text-sm font-semibold"
+                  style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterSheetOpen(false)}
+                  className="min-h-12 rounded-full px-4 text-sm font-semibold text-white"
+                  style={{ background: "var(--ink)" }}
+                >
+                  Apply
+                </button>
               </div>
             </div>
-          )}
-        </section>
+          </div>
+        )}
 
         <section className="flex-1 overflow-hidden">
           <div

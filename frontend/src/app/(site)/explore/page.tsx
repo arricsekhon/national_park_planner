@@ -178,7 +178,7 @@ function ExploreContent() {
     <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       <div className="mx-auto flex min-h-[calc(100vh-66px)] max-w-[1680px] flex-col px-4 py-4 sm:px-6">
         <section
-          className="relative z-20 mb-4 overflow-hidden rounded-[1.75rem] border p-3 sm:rounded-[2.2rem] sm:p-5"
+          className={`relative z-20 mb-4 rounded-[1.75rem] border p-3 sm:rounded-[2.2rem] sm:p-5 ${filterSheetOpen ? "overflow-visible" : "overflow-hidden"}`}
           style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.78)", boxShadow: "var(--shadow-card)", backdropFilter: "blur(24px) saturate(145%)" }}
         >
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_10%,rgba(220,233,243,0.8),transparent_24rem),radial-gradient(circle_at_88%_20%,rgba(229,242,239,0.9),transparent_26rem)]" />

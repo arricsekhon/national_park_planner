@@ -153,54 +153,6 @@ function generatePackingList(stops: TripStop[], startDate: string, endDate: stri
   return list;
 }
 
-function getPlannerInsights(trip: Trip, tripDays: number): { title: string; detail: string; tone: "good" | "warn" | "info" }[] {
-  const insights: { title: string; detail: string; tone: "good" | "warn" | "info" }[] = [];
-
-  if (!trip.startDate || !trip.endDate) {
-    insights.push({
-      title: "Add dates",
-      detail: "Dates unlock better pacing, packing, and day-by-day planning.",
-      tone: "warn",
-    });
-  } else if (tripDays && trip.stops.length > tripDays) {
-    insights.push({
-      title: "Route may be packed",
-      detail: `${trip.stops.length} stops across ${tripDays} days leaves little room for trail time.`,
-      tone: "warn",
-    });
-  } else if (tripDays && trip.stops.length > 0) {
-    insights.push({
-      title: "Trip pacing looks workable",
-      detail: `${trip.stops.length} stops across ${tripDays} days gives the itinerary room to breathe.`,
-      tone: "good",
-    });
-  }
-
-  if (trip.stops.length === 0) {
-    insights.push({
-      title: "Start with two anchor parks",
-      detail: "Add your must-see park first, then one nearby park to shape the route.",
-      tone: "info",
-    });
-  } else if (trip.stops.some((stop) => !stop.notes.trim())) {
-    insights.push({
-      title: "Some stops need notes",
-      detail: "Use AI to add arrival ideas, trail options, and timing notes.",
-      tone: "info",
-    });
-  }
-
-  if (!trip.notes.trim()) {
-    insights.push({
-      title: "Trip notes are empty",
-      detail: "Keep permit numbers, lodging, and reservation reminders here.",
-      tone: "info",
-    });
-  }
-
-  return insights.slice(0, 3);
-}
-
 function loadTrips(): Trip[] {
   if (typeof window === "undefined") return [];
   try {
@@ -448,7 +400,6 @@ export default function PlannerPage() {
     ? generatePackingList(activeTrip.stops, activeTrip.startDate, activeTrip.endDate)
     : [];
   const tripDays = activeTrip ? getTripDays(activeTrip.startDate, activeTrip.endDate) : 0;
-  const plannerInsights = activeTrip ? getPlannerInsights(activeTrip, tripDays) : [];
 
   const generateItinerary = async () => {
     if (!activeTrip || !activeTrip.stops.length) return;
@@ -521,9 +472,9 @@ export default function PlannerPage() {
         ))}
       </div>
 
-      <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1600px] gap-4 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
         <aside
-          className={`${mobileTab === "editor" ? "hidden" : "block"} lg:block rounded-2xl border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
+          className={`${mobileTab === "editor" ? "hidden" : "block"} lg:block rounded-lg border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
           style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)", backdropFilter: "blur(18px)" }}
         >
           <div className="flex items-center justify-between gap-3">
@@ -649,7 +600,7 @@ export default function PlannerPage() {
           ) : (
             <>
               <section
-                className="relative overflow-hidden rounded-2xl border p-5 text-white sm:p-6"
+                className="overflow-hidden rounded-lg border p-5 text-white sm:p-6"
                 style={{
                   background:
                     "linear-gradient(135deg, rgba(17,19,21,0.98) 0%, rgba(31,54,54,0.96) 54%, rgba(122,98,60,0.88) 100%)",
@@ -657,8 +608,6 @@ export default function PlannerPage() {
                   boxShadow: "0 22px 70px rgba(17,19,21,0.16)",
                 }}
               >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_10%,rgba(255,255,255,0.18),transparent_18rem),radial-gradient(circle_at_10%_90%,rgba(143,208,197,0.16),transparent_20rem)]" />
-                <div className="relative">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/62">
@@ -746,13 +695,12 @@ export default function PlannerPage() {
                     </div>
                   ))}
                 </div>
-                </div>
               </section>
 
-              <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_390px]">
+              <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_370px]">
                 <section className="min-w-0 space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <label className="rounded-2xl border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                    <label className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                       <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>
                         <Icon name="calendar" className="h-4 w-4" />
                         Start date
@@ -761,11 +709,11 @@ export default function PlannerPage() {
                         type="date"
                         value={activeTrip.startDate}
                         onChange={(e) => updateTrip({ ...activeTrip, startDate: e.target.value })}
-                        className="mt-3 w-full rounded-xl border px-3 py-3 text-sm font-semibold outline-none"
+                        className="mt-3 w-full rounded-lg border px-3 py-3 text-sm font-semibold outline-none"
                         style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
                       />
                     </label>
-                    <label className="rounded-2xl border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                    <label className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                       <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>
                         <Icon name="calendar" className="h-4 w-4" />
                         End date
@@ -774,13 +722,13 @@ export default function PlannerPage() {
                         type="date"
                         value={activeTrip.endDate}
                         onChange={(e) => updateTrip({ ...activeTrip, endDate: e.target.value })}
-                        className="mt-3 w-full rounded-xl border px-3 py-3 text-sm font-semibold outline-none"
+                        className="mt-3 w-full rounded-lg border px-3 py-3 text-sm font-semibold outline-none"
                         style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
                       />
                     </label>
                   </div>
 
-                  <div className="rounded-2xl border bg-white p-4 sm:p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                  <div className="rounded-lg border bg-white p-4 sm:p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
@@ -986,73 +934,7 @@ export default function PlannerPage() {
                 </section>
 
                 <aside className="space-y-4 xl:sticky xl:top-[82px] xl:self-start">
-                  <div
-                    className="overflow-hidden rounded-2xl border p-4 text-white"
-                    style={{
-                      background: "linear-gradient(145deg, #111315 0%, #203133 58%, #176d65 140%)",
-                      borderColor: "rgba(255,255,255,0.12)",
-                      boxShadow: "0 18px 52px rgba(17,19,21,0.14)",
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/54">
-                          AI Helper
-                        </p>
-                        <h3 className="mt-1 text-2xl font-semibold">Trip coach</h3>
-                        <p className="mt-2 text-sm leading-6 text-white/62">
-                          Checks pacing, missing details, and drafts a day plan from your stops.
-                        </p>
-                      </div>
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" />
-                        </svg>
-                      </span>
-                    </div>
-
-                    <div className="mt-4 space-y-2">
-                      {plannerInsights.map((insight) => (
-                        <div key={insight.title} className="rounded-xl border border-white/10 bg-white/8 p-3">
-                          <div className="flex items-start gap-2">
-                            <span
-                              className="mt-1 h-2 w-2 shrink-0 rounded-full"
-                              style={{
-                                background:
-                                  insight.tone === "good" ? "#86efac" : insight.tone === "warn" ? "#fbbf24" : "#8fd0c5",
-                              }}
-                            />
-                            <span>
-                              <span className="block text-sm font-semibold text-white">{insight.title}</span>
-                              <span className="mt-0.5 block text-xs leading-5 text-white/58">{insight.detail}</span>
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-4 grid gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void generateItinerary()}
-                        disabled={aiLoading || !activeTrip.stops.length}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold transition hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-45"
-                        style={{ color: "var(--ink)" }}
-                      >
-                        {aiLoading ? "Building itinerary..." : "Generate itinerary"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowChecklist(true)}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/14 px-4 text-sm font-semibold text-white/78 transition hover:bg-white/10"
-                      >
-                        Review packing list
-                      </button>
-                    </div>
-                    {aiError && <p className="mt-3 text-xs font-medium text-red-200">{aiError}</p>}
-                  </div>
-
-                  <div className="overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                  <div className="overflow-hidden rounded-lg border bg-white" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                     <button
                       type="button"
                       className="flex w-full items-center justify-between gap-4 p-4 text-left"
@@ -1093,7 +975,7 @@ export default function PlannerPage() {
                     )}
                   </div>
 
-                  <div className="rounded-2xl border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                  <div className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                     <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
                       <Icon name="note" className="h-4 w-4" />
                       Notes

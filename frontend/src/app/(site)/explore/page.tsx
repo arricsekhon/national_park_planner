@@ -193,7 +193,7 @@ function ExploreContent() {
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="mt-3 flex flex-col gap-2.5 sm:mt-6 sm:gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_210px_auto]">
+          <form onSubmit={handleSearch} className="mt-3 flex flex-col gap-2.5 sm:mt-6 sm:gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_9.5rem_auto]">
             <div className="relative">
               <input
                 type="text"
@@ -230,7 +230,7 @@ function ExploreContent() {
               <select
                 value={stateCode}
                 onChange={(e) => setStateCode(e.target.value)}
-                className="min-w-0 flex-1 min-h-12 rounded-full border px-4 text-sm font-semibold shadow-none sm:min-h-14"
+                className="min-h-12 w-36 min-w-0 flex-none rounded-full border px-4 text-sm font-semibold shadow-none sm:min-h-14 sm:w-44 lg:w-auto"
                 style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
               >
                 {US_STATES.map(([code, name]) => (
@@ -240,7 +240,7 @@ function ExploreContent() {
 
               <button
                 type="submit"
-                className="shrink-0 min-h-12 rounded-full px-6 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-95 sm:min-h-14"
+                className="min-h-12 flex-1 rounded-full px-5 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-95 sm:min-h-14 sm:flex-none sm:px-7"
                 style={{ background: "var(--ink)", boxShadow: "0 14px 34px rgba(17,19,21,0.16)" }}
               >
                 Search
@@ -250,13 +250,13 @@ function ExploreContent() {
 
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative">
-            <div className="flex gap-2 overflow-x-auto pb-1 pr-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 pr-10 [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
               {/* Near me chip */}
               <button
                 type="button"
                 onClick={handleNearMe}
                 disabled={nearMeLoading}
-                className="shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all active:scale-95 disabled:opacity-40"
+                className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 sm:px-4"
                 style={{
                   background: userLocation ? "var(--accent)" : "rgba(255,255,255,0.7)",
                   color: userLocation ? "white" : "var(--muted)",
@@ -286,7 +286,7 @@ function ExploreContent() {
               <button
                 type="button"
                 onClick={() => setNpOnly((v) => !v)}
-                className="shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all active:scale-95"
+                className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 sm:px-4"
                 style={{
                   background: npOnly ? "#a96f2d" : "rgba(255,255,255,0.7)",
                   color: npOnly ? "white" : "var(--muted)",
@@ -307,7 +307,7 @@ function ExploreContent() {
               <button
                 type="button"
                 onClick={() => setActivityFilter("")}
-                className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all active:scale-95"
+                className="shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 sm:px-4"
                 style={{
                   background: activityFilter === "" ? "var(--ink)" : "rgba(255,255,255,0.7)",
                   color: activityFilter === "" ? "white" : "var(--muted)",
@@ -321,7 +321,7 @@ function ExploreContent() {
                   type="button"
                   key={act}
                   onClick={() => setActivityFilter(activityFilter === act ? "" : act)}
-                  className="shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:-translate-y-0.5 active:scale-95"
+                  className="shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all hover:-translate-y-0.5 active:scale-95 sm:px-4"
                   style={{
                     background: activityFilter === act ? "var(--accent)" : "rgba(255,255,255,0.7)",
                     color: activityFilter === act ? "white" : "var(--muted)",

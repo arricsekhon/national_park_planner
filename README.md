@@ -13,7 +13,7 @@ The project is split into:
 - View park detail pages with photos, alerts, campgrounds, things to do, fees, operating hours, and weather.
 - Compare parks side by side.
 - Build trips with saved stops, notes, maps, packing support, and AI-generated day-by-day itinerary suggestions.
-- Sign up and sign in with Supabase Auth.
+- Sign up and sign in with Supabase Auth, including Google OAuth.
 - Keep a personal park collection and journal.
 - Use Google Maps when a browser API key is configured, with Leaflet support for map views.
 
@@ -112,7 +112,7 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 
 ## Supabase Setup
 
-Run `docs/supabase-schema.sql` in the Supabase SQL editor after creating the project and enabling email/password authentication.
+Run `docs/supabase-schema.sql` in the Supabase SQL editor after creating the project and enabling email/password authentication. To use Google sign-in, enable the Google provider in Supabase Auth and add your local and production site URLs to Supabase's allowed redirect URLs.
 
 The schema creates:
 

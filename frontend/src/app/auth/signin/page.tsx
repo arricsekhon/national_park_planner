@@ -5,16 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthIcon } from "../AuthIcon";
 import { AuthShell } from "../AuthShell";
+import { GoogleAuthButton } from "../GoogleAuthButton";
 import { useAuth } from "@/lib/auth";
 
 export default function SignInPage() {
-  const { signIn, user } = useAuth();
+  const { signIn, signInWithGoogle, user } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const emailId = "signin-email";
   const passwordId = "signin-password";
   const errorId = "signin-error";
@@ -34,6 +36,17 @@ export default function SignInPage() {
       setError(err instanceof Error ? err.message : "Sign in failed.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign in failed.");
+      setGoogleLoading(false);
     }
   };
 
@@ -60,6 +73,14 @@ export default function SignInPage() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <GoogleAuthButton loading={googleLoading} onClick={handleGoogleSignIn} mode="signin" />
+
+        <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+          <span className="h-px flex-1" style={{ background: "var(--line)" }} />
+          or use email
+          <span className="h-px flex-1" style={{ background: "var(--line)" }} />
+        </div>
+
         <div>
           <label htmlFor={emailId} className="block text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
             Email address

@@ -6,6 +6,7 @@ export type AuthIconName =
   | "compass"
   | "eye"
   | "eyeOff"
+  | "google"
   | "lock"
   | "mail"
   | "map"
@@ -68,6 +69,27 @@ export function AuthIcon({ name, className = "h-5 w-5" }: { name: AuthIconName; 
           <path d="M10.7 5.1A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.4 17.4 0 0 1-3.3 4.4" />
           <path d="M6.6 6.6A17.4 17.4 0 0 0 2 12s3.5 7 10 7a10.9 10.9 0 0 0 4.3-.9" />
           <path d="M9.9 9.9A3 3 0 0 0 14.1 14.1" />
+        </svg>
+      );
+    case "google":
+      return (
+        <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            fill="#4285F4"
+            d="M21.8 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.5a4.7 4.7 0 0 1-2 3.1V20h3.2c1.9-1.8 3.1-4.4 3.1-7.8Z"
+          />
+          <path
+            fill="#34A853"
+            d="M12 22c2.7 0 5-.9 6.7-2.4l-3.2-2.6c-.9.6-2 1-3.5 1-2.7 0-4.9-1.8-5.7-4.2H3v2.7A10 10 0 0 0 12 22Z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M6.3 13.8A6 6 0 0 1 6 12c0-.6.1-1.2.3-1.8V7.5H3A10 10 0 0 0 2 12c0 1.6.4 3.1 1 4.5l3.3-2.7Z"
+          />
+          <path
+            fill="#EA4335"
+            d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A9.8 9.8 0 0 0 12 2a10 10 0 0 0-9 5.5l3.3 2.7C7.1 7.8 9.3 6 12 6Z"
+          />
         </svg>
       );
     case "lock":

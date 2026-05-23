@@ -15,16 +15,21 @@ interface AuthCtx {
   loading: boolean;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => void;
 }
 
 const AuthContext = createContext<AuthCtx | null>(null);
 
 function mapUser(sbUser: { id: string; email?: string; user_metadata: Record<string, unknown> }): User {
+  const metadataName =
+    (sbUser.user_metadata?.name as string | undefined) ||
+    (sbUser.user_metadata?.full_name as string | undefined);
+
   return {
     id: sbUser.id,
     email: sbUser.email ?? "",
-    name: (sbUser.user_metadata?.name as string | undefined) || sbUser.email?.split("@")[0] || "User",
+    name: metadataName || sbUser.email?.split("@")[0] || "User",
     avatar: sbUser.user_metadata?.avatar_url as string | undefined,
   };
 }
@@ -60,13 +65,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw new Error(error.message);
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+    if (error) throw new Error(error.message);
+  }, []);
+
   const signOut = useCallback(() => {
     void supabase.auth.signOut();
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signUp, signIn, signOut }),
-    [user, loading, signUp, signIn, signOut]
+    () => ({ user, loading, signUp, signIn, signInWithGoogle, signOut }),
+    [user, loading, signUp, signIn, signInWithGoogle, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

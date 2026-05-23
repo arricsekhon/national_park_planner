@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthIcon } from "../AuthIcon";
 import { AuthShell } from "../AuthShell";
+import { GoogleAuthButton } from "../GoogleAuthButton";
 import { useAuth } from "@/lib/auth";
 
 export default function SignUpPage() {
-  const { signUp, user } = useAuth();
+  const { signUp, signInWithGoogle, user } = useAuth();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -17,6 +18,7 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const nameId = "signup-name";
   const emailId = "signup-email";
   const passwordId = "signup-password";
@@ -58,6 +60,17 @@ export default function SignUpPage() {
     }
   };
 
+  const handleGoogleSignUp = async () => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign up failed.");
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <AuthShell
       eyebrow="Create account"
@@ -81,6 +94,14 @@ export default function SignUpPage() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <GoogleAuthButton loading={googleLoading} onClick={handleGoogleSignUp} mode="signup" />
+
+        <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+          <span className="h-px flex-1" style={{ background: "var(--line)" }} />
+          or use email
+          <span className="h-px flex-1" style={{ background: "var(--line)" }} />
+        </div>
+
         <div>
           <label htmlFor={nameId} className="block text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
             Full name

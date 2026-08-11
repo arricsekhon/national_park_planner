@@ -3,6 +3,7 @@
 body { overflow-x: clip; }
 
 :root {
+  color-scheme: light;
   --nav-h: calc(66px + env(safe-area-inset-top, 0px));
 
   /* Core design tokens */
@@ -249,7 +250,7 @@ input:focus, textarea:focus, select:focus, button:focus-visible, a:focus-visible
   background: #252a2d;
 }
 
-/* Ink-fill button — adapts in dark mode without inline color hacks */
+/* Ink-fill button */
 .btn-ink {
   background: var(--ink);
   color: var(--surface);
@@ -277,62 +278,4 @@ input:focus, textarea:focus, select:focus, button:focus-visible, a:focus-visible
     transition-duration: 0.01ms !important;
   }
   body::after { display: none; }
-}
-
-/* ─── Dark mode ─────────────────────────────────────────────── */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #eceae7;
-    --ink-soft: #ccd0d4;
-    --muted: #767d84;
-    --muted-strong: #96a0a8;
-    --line: rgba(255, 255, 255, 0.09);
-    --surface: #0d0f10;
-    --surface-soft: #13161a;
-    --surface-elevated: rgba(22, 28, 32, 0.92);
-    --glass: rgba(16, 22, 28, 0.78);
-    --accent: #22b5a5;
-    --accent-bright: #2ed0be;
-    --accent-soft: rgba(34, 181, 165, 0.18);
-    --sand: #221f1a;
-    --sky: #141c26;
-    --amber: #d4903c;
-    --amber-warm: #e6a852;
-    --linen: #1a1c1e;
-
-    --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.4);
-    --shadow-card: 0 18px 60px rgba(0, 0, 0, 0.56);
-    --shadow-card-hover: 0 28px 86px rgba(0, 0, 0, 0.72);
-    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  }
-
-  body {
-    background-image:
-      radial-gradient(circle at 14% -6%, rgba(20, 28, 44, 0.8), transparent 30rem),
-      radial-gradient(circle at 92% 8%, rgba(22, 40, 36, 0.9), transparent 28rem),
-      linear-gradient(180deg, #0d0f10 0%, #0a0c0d 44%, #0d0f10 100%);
-  }
-
-  ::selection {
-    background: rgba(34, 181, 165, 0.28);
-  }
-
-  :where(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
-    background-color: rgba(26, 32, 38, 0.88);
-    color: var(--ink);
-  }
-
-  .glass-panel {
-    border-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .premium-button:hover {
-    background: #d6d2cc;
-  }
-
-  .skeleton-shimmer {
-    background: linear-gradient(90deg, var(--linen) 25%, #222426 50%, var(--linen) 75%);
-    background-size: 200% 100%;
-  }
 }

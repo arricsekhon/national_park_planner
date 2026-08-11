@@ -488,12 +488,12 @@ function ExploreContent() {
               </div>
 
               <div className="grid gap-3">
-                <label className="grid gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>State</span>
+                <label className="grid gap-2.5">
+                  <span className="text-sm font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>State</span>
                   <select
                     value={stateCode}
                     onChange={(e) => setStateCode(e.target.value)}
-                    className="min-h-12 rounded-xl border px-4 text-sm font-semibold"
+                    className="min-h-14 rounded-lg border px-4 text-lg font-semibold"
                     style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
                     {US_STATES.map(([code, name]) => (
@@ -502,12 +502,12 @@ function ExploreContent() {
                   </select>
                 </label>
 
-                <label className="grid gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>Activity</span>
+                <label className="grid gap-2.5">
+                  <span className="text-sm font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>Activity</span>
                   <select
                     value={activityFilter}
                     onChange={(e) => setActivityFilter(e.target.value)}
-                    className="min-h-12 rounded-xl border px-4 text-sm font-semibold"
+                    className="min-h-14 rounded-lg border px-4 text-lg font-semibold"
                     style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
                     <option value="">All activities</option>

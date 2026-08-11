@@ -493,7 +493,7 @@ function ExploreContent() {
                   <select
                     value={stateCode}
                     onChange={(e) => setStateCode(e.target.value)}
-                    className="min-h-16 w-full rounded-lg border px-5 text-base font-medium"
+                    className="min-h-16 w-full rounded-full border px-7 text-base font-medium"
                     style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
                     {US_STATES.map(([code, name]) => (
@@ -507,7 +507,7 @@ function ExploreContent() {
                   <select
                     value={activityFilter}
                     onChange={(e) => setActivityFilter(e.target.value)}
-                    className="min-h-16 w-full rounded-lg border px-5 text-base font-medium"
+                    className="min-h-16 w-full rounded-full border px-7 text-base font-medium"
                     style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
                     <option value="">All activities</option>
@@ -520,7 +520,7 @@ function ExploreContent() {
                 <button
                   type="button"
                   onClick={() => setNpOnly((value) => !value)}
-                  className="flex min-h-12 items-center justify-between rounded-xl border px-4 text-left text-sm font-semibold"
+                  className="flex min-h-16 items-center justify-between rounded-full border px-7 text-left text-base font-medium"
                   style={{
                     background: npOnly ? "rgba(169,111,45,0.12)" : "white",
                     borderColor: npOnly ? "rgba(169,111,45,0.32)" : "var(--line)",

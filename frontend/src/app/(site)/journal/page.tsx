@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { searchParks, type Park } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -35,6 +36,17 @@ type IconName =
   | "trash";
 
 const STORAGE_KEY = "trailquest_journal";
+const QUICK_CAPTURE_TYPES = ["Trail note", "Parking", "Weather", "Campsite", "Photo"];
+const FIELD_NOTE_PROMPTS = [
+  "What trail did you take?",
+  "Was parking full?",
+  "What changed with weather?",
+  "What would you do differently?",
+  "Best view or stop?",
+  "Any permit or shuttle note?",
+];
+const JOURNAL_TAGS = ["Hiking", "Parking", "Campsite", "Wildlife", "Weather", "Permit"];
+const RATING_LABELS = ["Poor", "Fair", "Good", "Great", "Worth returning"];
 
 function loadEntries(): JournalEntry[] {
   if (typeof window === "undefined") return [];
@@ -85,6 +97,17 @@ function formatDate(value: string): string {
 function averageRating(entries: JournalEntry[]): string {
   if (!entries.length) return "0.0";
   return (entries.reduce((sum, entry) => sum + entry.rating, 0) / entries.length).toFixed(1);
+}
+
+function entryTags(entry: JournalEntry): string[] {
+  const text = `${entry.title} ${entry.notes}`.toLowerCase();
+  const tags = [];
+  if (text.includes("trail") || text.includes("hike")) tags.push("Trail");
+  if (text.includes("parking")) tags.push("Parking");
+  if (text.includes("camp")) tags.push("Campsite");
+  if (text.includes("weather") || text.includes("rain") || text.includes("snow")) tags.push("Weather");
+  if (entry.photos.length) tags.push(`${entry.photos.length} photo${entry.photos.length === 1 ? "" : "s"}`);
+  return tags.length ? tags.slice(0, 3) : ["Field note"];
 }
 
 function JournalContent() {
@@ -227,21 +250,21 @@ function JournalContent() {
         ))}
       </div>
 
-      <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)]">
         <aside
-          className={`${mobileTab === "browse" ? "hidden" : "block"} lg:block rounded-lg border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
-          style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)", backdropFilter: "blur(18px)" }}
+          className={`${mobileTab === "browse" ? "hidden" : "block"} lg:block rounded-lg border bg-white/70 p-3.5 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
+          style={{ borderColor: "var(--line)", backdropFilter: "blur(18px)" }}
         >
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
                 Field notes
               </p>
-              <h1 className="mt-1 text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-                Trail Archive
+              <h1 className="mt-1 text-xl font-semibold" style={{ color: "var(--ink)" }}>
+                Trail archive
               </h1>
-              <p className="mt-1 text-sm leading-6" style={{ color: "var(--muted)" }}>
-                Notes, ratings, and photos from every park visit.
+              <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>
+                Search notes from each park visit.
               </p>
             </div>
             <button
@@ -256,36 +279,55 @@ function JournalContent() {
             </button>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
+          <div className="mt-4 grid grid-cols-3 gap-1.5">
             {[
               { label: "Entries", value: entries.length.toString() },
               { label: "Photos", value: photoCount.toString() },
-              { label: "Avg", value: averageRating(entries) },
+              { label: "Avg rating", value: averageRating(entries) },
             ].map(({ label, value }) => (
-              <div key={label} className="rounded-lg border bg-white p-3" style={{ borderColor: "var(--line)" }}>
-                <p className="text-xl font-semibold" style={{ color: "var(--ink)" }}>
+              <div key={label} className="rounded-md border bg-white px-2.5 py-2" style={{ borderColor: "var(--line)" }}>
+                <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>
                   {value}
                 </p>
-                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--muted)" }}>
+                <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>
                   {label}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="relative mt-5">
+          <div className="relative mt-4">
             <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <input
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search entries"
-              className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none"
+              className="w-full rounded-lg border py-2.5 pl-10 pr-3 text-sm font-medium outline-none"
               style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
             />
           </div>
 
-          <div className="mt-5 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-330px)]">
+          <div className="mt-3 rounded-lg border bg-[var(--surface)] p-3" style={{ borderColor: "var(--line)" }}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
+              Quick capture
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {QUICK_CAPTURE_TYPES.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setShowForm(true)}
+                  className="min-h-8 rounded-md border bg-white px-2.5 text-left text-xs font-semibold transition hover:-translate-y-0.5 hover:bg-stone-50"
+                  style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-360px)]">
             {loadingEntries ? (
               <div className="space-y-2 animate-pulse">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -296,25 +338,11 @@ function JournalContent() {
                 ))}
               </div>
             ) : entries.length === 0 ? (
-              <div className="rounded-xl border border-dashed px-4 py-8 text-center" style={{ borderColor: "var(--line)" }}>
-                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                    <path d="M6 4h11a2 2 0 0 1 2 2v14H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/><path d="M7 4v16"/><path d="M10 8h5"/><path d="M10 12h5"/>
-                  </svg>
-                </div>
+              <div className="rounded-lg border border-dashed px-3.5 py-4" style={{ borderColor: "var(--line)" }}>
                 <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>No entries yet</p>
                 <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>
-                  Write your first memory after your next park visit.
+                  Start with the detail you&apos;ll want before going back.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(true)}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-white transition hover:-translate-y-0.5"
-                  style={{ background: "var(--ink)" }}
-                >
-                  <Icon name="plus" className="h-3.5 w-3.5" />
-                  New entry
-                </button>
               </div>
             ) : (
               filteredEntries.slice(0, 12).map((entry) => (
@@ -339,67 +367,126 @@ function JournalContent() {
 
         <main className={`${mobileTab === "entries" ? "hidden" : "block"} lg:block min-w-0`}>
           <section
-            className="overflow-hidden rounded-lg border p-5 text-white sm:p-6"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(17,19,21,0.98) 0%, rgba(32,57,57,0.96) 58%, rgba(132,92,42,0.9) 100%)",
-              borderColor: "rgba(255,255,255,0.14)",
-              boxShadow: "0 22px 70px rgba(17,19,21,0.16)",
-            }}
+            className="rounded-lg border bg-white p-4"
+            style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
           >
-            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-              <div className="max-w-3xl">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/62">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-white">
-                    <Icon name="journal" className="h-4 w-4" />
-                  </span>
-                  Journal
-                </div>
-                <h2 className="mt-4 text-4xl font-semibold leading-tight md:text-5xl">
-                  Capture the part a map cannot.
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-2xl">
+                <h2 className="text-2xl font-semibold leading-tight md:text-3xl" style={{ color: "var(--ink)" }}>
+                  Field notes
                 </h2>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/68">
-                  Keep the route, weather, favorite views, campsite notes, and photos together while the details are still fresh.
+                <p className="mt-2 text-sm leading-6" style={{ color: "var(--muted)" }}>
+                  Save trail conditions, parking, weather, photos, and next-time notes.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowForm(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
-                style={{ background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.18)" }}
-              >
-                <Icon name="plus" className="h-4 w-4" />
-                New entry
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/explore"
+                  className="inline-flex items-center justify-center rounded-lg border bg-white px-3.5 py-2.5 text-sm font-semibold transition hover:-translate-y-0.5"
+                  style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                >
+                  Browse parks
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
+                  style={{ background: "var(--ink)" }}
+                >
+                  <Icon name="plus" className="h-4 w-4" />
+                  New entry
+                </button>
+              </div>
             </div>
           </section>
 
           {entries.length === 0 ? (
-            <section className="mt-4 rounded-lg border bg-white px-6 py-16 text-center" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
-              <span
-                className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg"
-                style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-              >
-                <Icon name="spark" className="h-6 w-6" />
-              </span>
-              <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-                Empty archive
-              </p>
-              <h3 className="mt-2 text-3xl font-semibold" style={{ color: "var(--ink)" }}>
-                Write the first page.
-              </h3>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-7" style={{ color: "var(--muted)" }}>
-                Add a park, rating, photos, and the trail details you want later.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowForm(true)}
-                className="mt-7 inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5"
-                style={{ background: "var(--ink)" }}
-              >
-                <Icon name="plus" className="h-4 w-4" />
-                Write first entry
-              </button>
+            <section className="mt-4 overflow-hidden rounded-lg border bg-white" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+              <div className="grid lg:grid-cols-[minmax(0,1fr)_330px]">
+                <div className="p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-4" style={{ borderColor: "var(--line)" }}>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                        Journal starter
+                      </p>
+                      <h3 className="mt-2 text-xl font-semibold sm:text-2xl" style={{ color: "var(--ink)" }}>
+                        Start with one detail from the visit.
+                      </h3>
+                      <p className="mt-2 max-w-xl text-sm leading-6" style={{ color: "var(--muted)" }}>
+                        A useful note can be simple: parking, trail conditions, weather, or what you would change next time.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowForm(true)}
+                      className="inline-flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5"
+                      style={{ background: "var(--ink)" }}
+                    >
+                      <Icon name="plus" className="h-4 w-4" />
+                      Write entry
+                    </button>
+                  </div>
+
+                  <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
+                    {FIELD_NOTE_PROMPTS.map((prompt, index) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => setShowForm(true)}
+                        className="animate-journal-card group min-h-[74px] rounded-lg border bg-[var(--surface)] p-3 text-left transition duration-300 hover:-translate-y-1 hover:bg-white"
+                        style={{ borderColor: "var(--line)", animationDelay: `${index * 70}ms` }}
+                      >
+                        <span className="flex items-start justify-between gap-3 text-sm font-semibold leading-6" style={{ color: "var(--ink)" }}>
+                          {prompt}
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition group-hover:bg-[var(--accent-soft)]" style={{ color: "var(--accent)" }}>
+                            <Icon name="plus" className="h-3.5 w-3.5" />
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <aside className="animate-journal-card border-t bg-[var(--surface)] p-4 lg:border-l lg:border-t-0" style={{ borderColor: "var(--line)", animationDelay: "360ms" }}>
+                  <div className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)" }}>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                      Your first note can include
+                    </p>
+                    <div className="mt-4 grid gap-2.5">
+                      {[
+                        "Park",
+                        "Visit date",
+                        "Rating",
+                        "Trail condition",
+                        "Parking note",
+                        "Weather / gear",
+                        "Photos",
+                        "Next-time reminder",
+                      ].map((item) => (
+                        <div key={item} className="flex items-center gap-2 text-sm" style={{ color: "var(--muted-strong)" }}>
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-3 rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)" }}>
+                    <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                      Save the details you&apos;ll check before going back.
+                    </p>
+                    <p className="mt-2 text-xs leading-5" style={{ color: "var(--muted)" }}>
+                      Parking, weather, trail condition, and next-time notes stay attached to the visit.
+                    </p>
+                    <Link
+                      href="/explore"
+                      className="mt-4 inline-flex w-full items-center justify-center rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold transition hover:-translate-y-0.5"
+                      style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                    >
+                      Browse parks
+                    </Link>
+                  </div>
+                </aside>
+              </div>
             </section>
           ) : filteredEntries.length === 0 ? (
             <section className="mt-4 rounded-lg border bg-white px-6 py-14 text-center" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
@@ -442,12 +529,19 @@ function JournalContent() {
                     </div>
                   </div>
                   <div className="p-4">
+                    <div className="mb-3 flex flex-wrap gap-1.5">
+                      {entryTags(entry).map((tag) => (
+                        <span key={tag} className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: tag.includes("photo") ? "var(--sand)" : "var(--accent-soft)", color: tag.includes("photo") ? "var(--ink)" : "var(--accent)" }}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                     <p className="line-clamp-3 text-sm leading-7" style={{ color: "var(--muted)" }}>
                       {entry.notes || "No notes written yet."}
                     </p>
-                    <div className="mt-4 flex items-center justify-between text-xs font-semibold" style={{ color: "var(--accent)" }}>
-                      <span>{entry.photos.length} photo{entry.photos.length === 1 ? "" : "s"}</span>
-                      <span>Open</span>
+                    <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs font-semibold" style={{ borderColor: "var(--line)", color: "var(--accent)" }}>
+                      <span>{formatDate(entry.date)}</span>
+                      <span>View note</span>
                     </div>
                   </div>
                 </button>
@@ -627,7 +721,11 @@ function NewEntryForm({
   const [parkName, setParkName] = useState(prefillParkName);
   const [parkCode, setParkCode] = useState(prefillParkCode);
   const [rating, setRating] = useState(5);
-  const [notes, setNotes] = useState("");
+  const [trailConditions, setTrailConditions] = useState("");
+  const [parkingNotes, setParkingNotes] = useState("");
+  const [weatherGear, setWeatherGear] = useState("");
+  const [nextTime, setNextTime] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [parkSearch, setParkSearch] = useState("");
@@ -698,6 +796,14 @@ function NewEntryForm({
       finalPhotos = results;
     }
 
+    const finalNotes = [
+      selectedTags.length ? `Tags: ${selectedTags.join(", ")}` : "",
+      trailConditions.trim() ? `Trail conditions:\n${trailConditions.trim()}` : "",
+      parkingNotes.trim() ? `Parking notes:\n${parkingNotes.trim()}` : "",
+      weatherGear.trim() ? `Weather / gear:\n${weatherGear.trim()}` : "",
+      nextTime.trim() ? `Next time:\n${nextTime.trim()}` : "",
+    ].filter(Boolean).join("\n\n");
+
     onSave({
       id: entryId,
       title: title.trim(),
@@ -705,43 +811,47 @@ function NewEntryForm({
       parkCode,
       parkName: parkName || "Unknown Park",
       rating,
-      notes,
+      notes: finalNotes,
       photos: finalPhotos,
       createdAt: new Date().toISOString(),
     });
     setSaving(false);
   };
 
+  const toggleTag = (tag: string) => {
+    setSelectedTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]);
+  };
+
+  const notesStarted = Boolean(trailConditions.trim() || parkingNotes.trim() || weatherGear.trim() || nextTime.trim());
+
   return (
     <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
-      <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_370px]">
+      <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <main className="min-w-0 space-y-4">
           <section
-            className="overflow-hidden rounded-lg border p-5 text-white sm:p-6"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(17,19,21,0.98) 0%, rgba(32,57,57,0.96) 58%, rgba(132,92,42,0.9) 100%)",
-              borderColor: "rgba(255,255,255,0.14)",
-              boxShadow: "0 22px 70px rgba(17,19,21,0.16)",
-            }}
+            className="rounded-lg border bg-white p-4 sm:p-5"
+            style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
           >
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/62">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-white">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-md" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
                     <Icon name="journal" className="h-4 w-4" />
                   </span>
-                  New memory
+                  New field note
                 </div>
-                <h1 className="mt-4 text-4xl font-semibold leading-tight md:text-5xl">Write an entry.</h1>
-                <p className="mt-3 max-w-xl text-sm leading-7 text-white/68">
-                  Save the park, conditions, favorite view, photos, and the details you will want later.
+                <h1 className="mt-3 text-2xl font-semibold leading-tight md:text-3xl" style={{ color: "var(--ink)" }}>
+                  Add the details you will check next time.
+                </h1>
+                <p className="mt-2 max-w-xl text-sm leading-6" style={{ color: "var(--muted)" }}>
+                  Park, date, rating, photos, and field notes from the visit.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onCancel}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/16 px-3 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/10"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:bg-stone-50"
+                style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}
               >
                 <Icon name="close" className="h-4 w-4" />
                 Cancel
@@ -771,16 +881,24 @@ function NewEntryForm({
           </div>
 
           <section className="rounded-lg border bg-white p-4 sm:p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+            <div className="mb-4 flex items-center justify-between gap-3 border-b pb-3" style={{ borderColor: "var(--line)" }}>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
+                Visit basics
+              </p>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>
+                Title is required
+              </p>
+            </div>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
               <label>
                 <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
-                  Entry title
+                  Note title
                 </span>
                 <input
                   type="text"
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  placeholder="Dawn hike above the valley"
+                  placeholder="Mist Trail before the crowds"
                   className="mt-2 w-full rounded-lg border px-3 py-3 text-sm font-semibold outline-none"
                   style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
                 />
@@ -789,7 +907,7 @@ function NewEntryForm({
               <label>
                 <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
                   <Icon name="calendar" className="h-4 w-4" />
-                  Date
+                  Visit date
                 </span>
                 <input
                   type="date"
@@ -883,35 +1001,115 @@ function NewEntryForm({
                 <div className="mt-2 flex min-h-[46px] items-center rounded-lg border bg-white px-3" style={{ borderColor: "var(--line)" }}>
                   <RatingStars rating={rating} interactive onChange={setRating} />
                 </div>
+                <p className="mt-1.5 text-xs font-medium" style={{ color: "var(--muted)" }}>
+                  {rating} {RATING_LABELS[rating - 1]}
+                </p>
               </div>
             </div>
           </section>
 
           <section className="rounded-lg border bg-white p-4 sm:p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
-            <label>
-              <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
-                <Icon name="journal" className="h-4 w-4" />
-                Notes & memories
-              </span>
-              <textarea
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Trail conditions, weather, favorite view, campsite, permits, or what you would do differently next time..."
-                rows={11}
-                className="mt-3 w-full resize-none rounded-lg border px-3 py-3 text-sm leading-7 outline-none"
-                style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
+            <div className="flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-start sm:justify-between" style={{ borderColor: "var(--line)" }}>
+              <div>
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
+                  <Icon name="journal" className="h-4 w-4" />
+                  Field notes
+                </span>
+                <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
+                  Write it while the visit is still fresh.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5 sm:justify-end">
+                {JOURNAL_TAGS.map((tag) => {
+                  const active = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className="min-h-8 rounded-full border px-3 text-xs font-semibold transition"
+                      style={{
+                        background: active ? "var(--accent)" : "white",
+                        borderColor: active ? "var(--accent)" : "var(--line)",
+                        color: active ? "white" : "var(--muted-strong)",
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <FieldNoteTextarea
+                label="Trail conditions"
+                value={trailConditions}
+                onChange={setTrailConditions}
+                placeholder="Mist Trail steps were wet near Vernal Fall. Crowded after 9 AM."
               />
-            </label>
+              <FieldNoteTextarea
+                label="Parking notes"
+                value={parkingNotes}
+                onChange={setParkingNotes}
+                placeholder="Curry Village lot was full by 8:15 AM. Shuttle wait was 20 minutes."
+              />
+              <FieldNoteTextarea
+                label="Weather / gear"
+                value={weatherGear}
+                onChange={setWeatherGear}
+                placeholder="Cool morning, hot by noon. Rain shell stayed packed."
+              />
+              <FieldNoteTextarea
+                label="Next time"
+                value={nextTime}
+                onChange={setNextTime}
+                placeholder="Start before 7:30 AM. Bring extra socks. Skip the overlook if crowded."
+              />
+            </div>
           </section>
         </main>
 
         <aside className="space-y-4 xl:sticky xl:top-[82px] xl:self-start">
           <section className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
+              <Icon name="journal" className="h-4 w-4" />
+              Entry checklist
+            </p>
+            <div className="mt-3 grid gap-2">
+              {[
+                ["Park selected", Boolean(parkName)],
+                ["Date set", Boolean(date)],
+                ["Rating added", rating > 0],
+                ["Notes started", notesStarted],
+                ["Photos added", photos.length > 0],
+              ].map(([label, done]) => (
+                <div key={label as string} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--line)", background: "var(--surface)" }}>
+                  <span style={{ color: "var(--muted-strong)" }}>{label as string}</span>
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded border text-[10px]"
+                    style={{
+                      background: done ? "var(--accent)" : "white",
+                      borderColor: done ? "var(--accent)" : "var(--line)",
+                      color: "white",
+                    }}
+                  >
+                    {done ? "✓" : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
               <Icon name="camera" className="h-4 w-4" />
               Photos
             </p>
-            <div className="mt-4 grid grid-cols-3 gap-2 xl:grid-cols-2">
+            <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>
+              Add trail signs, views, campsites, or parking references.
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-2 xl:grid-cols-2">
               {photos.map((src, index) => (
                 <div key={`${src}-${index}`} className="group relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -930,7 +1128,7 @@ function NewEntryForm({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-xs font-semibold transition hover:bg-stone-50"
+                className="flex aspect-square w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed text-xs font-semibold transition hover:bg-stone-50"
                 style={{ borderColor: "rgba(17,19,21,0.18)", color: "var(--muted)" }}
               >
                 <Icon name="plus" className="h-5 w-5" />
@@ -940,26 +1138,11 @@ function NewEntryForm({
             <input ref={fileRef} type="file" accept="image/*" multiple onChange={handlePhotos} className="hidden" />
           </section>
 
-          <section className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
-              Review
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-              {title || "Untitled entry"}
-            </h2>
-            <p className="mt-3 text-sm leading-6" style={{ color: "var(--muted)" }}>
-              {parkName || "No park selected"} - {formatDate(date)}
-            </p>
-            <div className="mt-4">
-              <RatingStars rating={rating} compact />
-            </div>
-          </section>
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 rounded-lg border bg-white p-3" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-lg border bg-white py-3 text-sm font-semibold transition hover:-translate-y-0.5"
+              className="rounded-lg border bg-white py-3 text-sm font-semibold transition hover:bg-stone-50"
               style={{ borderColor: "var(--line)", color: "var(--muted)" }}
             >
               Cancel
@@ -968,7 +1151,7 @@ function NewEntryForm({
               type="button"
               onClick={() => void handleSave()}
               disabled={!title.trim() || saving}
-              className="rounded-lg py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-40"
+              className="rounded-lg py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
               style={{ background: "var(--ink)" }}
             >
               {saving ? "Saving…" : "Save"}
@@ -977,6 +1160,34 @@ function NewEntryForm({
         </aside>
       </div>
     </div>
+  );
+}
+
+function FieldNoteTextarea({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--muted)" }}>
+        {label}
+      </span>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        rows={4}
+        className="mt-2 w-full resize-none rounded-lg border px-3 py-3 text-sm leading-6 outline-none"
+        style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
+      />
+    </label>
   );
 }
 

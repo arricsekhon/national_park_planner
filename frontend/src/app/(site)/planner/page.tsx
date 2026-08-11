@@ -63,6 +63,44 @@ type IconName =
 
 const STORAGE_KEY = "trailquest_trips";
 const DAY_MS = 86400000;
+const TRIP_STARTERS = [
+  {
+    name: "Yosemite long weekend",
+    label: "3 days",
+    detail: "Arrival day, main hike, short route before leaving.",
+    notes: "Check parking early, shuttle timing, and a rainy-day backup.",
+  },
+  {
+    name: "Utah parks road trip",
+    label: "5 days",
+    detail: "Compare drive time, heat, and permit notes.",
+    notes: "Keep hikes short in the afternoon and add water stops.",
+  },
+  {
+    name: "Olympic rain backup plan",
+    label: "2 days",
+    detail: "Forest walk, coast stop, and flexible weather notes.",
+    notes: "Pack rain shell, check road status, and save an indoor backup.",
+  },
+  {
+    name: "Family day hike",
+    label: "1 day",
+    detail: "Easy trail, lunch stop, parking note, and backup viewpoint.",
+    notes: "Keep the route short, add restroom stops, and check pets on trails.",
+  },
+];
+
+const EMPTY_ROUTE_DAYS = [
+  ["Day 1", "Add arrival stop", "Add main trail", "Add backup stop"],
+  ["Day 2", "Add morning stop", "Add scenic stop", "Add notes"],
+];
+
+const TRIP_READY_ITEMS = [
+  "Dates set",
+  "First stop added",
+  "Packing list reviewed",
+  "Notes added",
+];
 
 function parseInputDate(value: string): Date | null {
   if (!value) return null;
@@ -99,6 +137,31 @@ function dateSummary(trip: Trip): string {
 
 function stopSummary(count: number): string {
   return `${count} ${count === 1 ? "stop" : "stops"}`;
+}
+
+function createdSummary(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Draft";
+  return `Draft - ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date)}`;
+}
+
+function packingCategory(item: string): string {
+  const lower = item.toLowerCase();
+  if (lower.includes("water") || lower.includes("snack") || lower.includes("food") || lower.includes("stove")) return "Water + food";
+  if (lower.includes("boot") || lower.includes("sock") || lower.includes("jacket") || lower.includes("hat") || lower.includes("glove") || lower.includes("layer")) return "Clothing";
+  if (lower.includes("map") || lower.includes("navigation") || lower.includes("gps") || lower.includes("charger")) return "Navigation";
+  if (lower.includes("first aid") || lower.includes("whistle") || lower.includes("sunscreen") || lower.includes("headlamp") || lower.includes("knife")) return "Safety";
+  if (lower.includes("id") || lower.includes("pass") || lower.includes("permit")) return "Park documents";
+  return "Camp";
+}
+
+function groupPackingItems(items: string[]): [string, string[]][] {
+  const groups = new Map<string, string[]>();
+  for (const item of items) {
+    const category = packingCategory(item);
+    groups.set(category, [...(groups.get(category) ?? []), item]);
+  }
+  return Array.from(groups.entries());
 }
 
 function createLocalId(prefix: string): string {
@@ -270,14 +333,14 @@ export default function PlannerPage() {
     }
   }, [user]);
 
-  const newTrip = () => {
+  const newTrip = (starter?: { name?: string; notes?: string }) => {
     const trip: Trip = {
       id: createLocalId("trip"),
-      name: "My Trip",
+      name: starter?.name ?? "My Trip",
       startDate: "",
       endDate: "",
       stops: [],
-      notes: "",
+      notes: starter?.notes ?? "",
       createdAt: new Date().toISOString(),
     };
     const next = [trip, ...trips];
@@ -474,24 +537,24 @@ export default function PlannerPage() {
 
       <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
         <aside
-          className={`${mobileTab === "editor" ? "hidden" : "block"} lg:block rounded-lg border bg-white/80 p-4 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
-          style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)", backdropFilter: "blur(18px)" }}
+          className={`${mobileTab === "editor" ? "hidden" : "block"} lg:block rounded-lg border bg-white/75 p-3.5 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
+          style={{ borderColor: "var(--line)", backdropFilter: "blur(18px)" }}
         >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
                 Planner
               </p>
-              <h1 className="mt-1 text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-                Trip Studio
+              <h1 className="mt-1 text-xl font-semibold" style={{ color: "var(--ink)" }}>
+                Trips
               </h1>
-              <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-                {trips.length} {trips.length === 1 ? "trip" : "trips"} {user ? "synced" : "saved locally"}
+              <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>
+                Draft routes, dates, packing, and notes.
               </p>
             </div>
             <button
               type="button"
-              onClick={newTrip}
+              onClick={() => newTrip()}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white transition hover:-translate-y-0.5 active:translate-y-0"
               style={{ background: "var(--ink)", boxShadow: "0 12px 26px rgba(17,19,21,0.16)" }}
               aria-label="New trip"
@@ -501,7 +564,16 @@ export default function PlannerPage() {
             </button>
           </div>
 
-          <div className="mt-5 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-220px)]">
+          <div className="mt-4 flex items-center justify-between rounded-lg border bg-[var(--surface)] px-3 py-2" style={{ borderColor: "var(--line)" }}>
+            <span className="text-xs font-semibold" style={{ color: "var(--muted)" }}>
+              {trips.length} {trips.length === 1 ? "trip" : "trips"} {user ? "synced" : "saved locally"}
+            </span>
+            <span className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+              Drafts
+            </span>
+          </div>
+
+          <div className="mt-3 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-250px)]">
             {!tripsReady && (
               <div className="space-y-2 animate-pulse">
                 {[1, 2, 3].map((i) => (
@@ -518,16 +590,34 @@ export default function PlannerPage() {
               </div>
             )}
             {tripsReady && trips.length === 0 && (
-              <div className="rounded-xl border border-dashed px-4 py-8 text-center" style={{ borderColor: "var(--line)" }}>
-                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M12 19h3a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h3"/>
-                  </svg>
-                </div>
-                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>No trips yet</p>
+              <div className="rounded-lg border p-3" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.72)" }}>
+                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Start with a trip shape</p>
                 <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>
-                  Hit + to start your first route.
+                  Pick a starter or create a blank route.
                 </p>
+                <div className="mt-3 grid gap-2">
+                  {TRIP_STARTERS.map((starter) => (
+                    <button
+                      key={starter.name}
+                      type="button"
+                      onClick={() => newTrip(starter)}
+                      className="rounded-lg border bg-white px-3 py-2.5 text-left transition hover:-translate-y-0.5"
+                      style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                    >
+                      <span className="block text-xs font-semibold">{starter.name}</span>
+                      <span className="mt-0.5 block text-[11px]" style={{ color: "var(--muted)" }}>{starter.label}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => newTrip()}
+                    className="rounded-lg border border-dashed bg-white px-3 py-2.5 text-left transition hover:-translate-y-0.5"
+                    style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                  >
+                    <span className="block text-xs font-semibold">Blank trip</span>
+                    <span className="mt-0.5 block text-[11px]" style={{ color: "var(--muted)" }}>Start from scratch</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -554,9 +644,20 @@ export default function PlannerPage() {
                       <Icon name="route" className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">{trip.name || "Untitled trip"}</span>
+                      <span className="flex items-start justify-between gap-3">
+                        <span className="block truncate text-sm font-semibold">{trip.name || "Untitled trip"}</span>
+                        <span className="shrink-0 text-[11px] font-semibold opacity-80">Open</span>
+                      </span>
                       <span className="mt-1 block truncate text-xs" style={{ color: active ? "rgba(255,255,255,0.68)" : "var(--muted)" }}>
-                        {stopSummary(trip.stops.length)} - {dateSummary(trip)}
+                        {dateSummary(trip)}
+                      </span>
+                      <span className="mt-2 flex flex-wrap gap-1.5">
+                        <span className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: active ? "rgba(255,255,255,0.12)" : "var(--surface-soft)", color: active ? "white" : "var(--muted-strong)" }}>
+                          {stopSummary(trip.stops.length)}
+                        </span>
+                        <span className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: active ? "rgba(255,255,255,0.12)" : "var(--sand)", color: active ? "white" : "var(--ink)" }}>
+                          {createdSummary(trip.createdAt)}
+                        </span>
                       </span>
                     </span>
                   </div>
@@ -569,91 +670,141 @@ export default function PlannerPage() {
         <main className={`${mobileTab === "trips" ? "hidden" : "block"} lg:block min-w-0`}>
           {!activeTrip ? (
             <div
-              className="flex min-h-[calc(100vh-98px)] flex-col items-center justify-center rounded-lg border bg-white/80 px-6 py-16 text-center"
+              className="min-h-[calc(100vh-98px)] rounded-lg border bg-white/80 p-5 sm:p-7"
               style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
             >
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-lg"
-                style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-              >
-                <Icon name="map" className="h-6 w-6" />
-              </span>
-              <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>
-                No active trip
-              </p>
-              <h2 className="mt-2 max-w-xl text-4xl font-semibold" style={{ color: "var(--ink)" }}>
-                Start a park route.
-              </h2>
-              <p className="mt-4 max-w-md text-base leading-7" style={{ color: "var(--muted)" }}>
-                Create a trip, add stops, and keep the route details in one workspace.
-              </p>
-              <button
-                type="button"
-                onClick={newTrip}
-                className="mt-7 inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
-                style={{ background: "var(--ink)" }}
-              >
-                <Icon name="plus" />
-                Create trip
-              </button>
+              <div className="grid min-h-[calc(100vh-154px)] gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.65fr)] lg:items-center">
+                <section>
+                  <span
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-lg"
+                    style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+                  >
+                    <Icon name="map" className="h-5 w-5" />
+                  </span>
+                  <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>
+                    Trip planner
+                  </p>
+                  <h2 className="mt-2 max-w-xl text-3xl font-semibold leading-tight sm:text-4xl" style={{ color: "var(--ink)" }}>
+                    Start a trip plan with the first park.
+                  </h2>
+                  <p className="mt-4 max-w-xl text-base leading-7" style={{ color: "var(--muted)" }}>
+                    Create a trip, add park stops, then keep dates, packing, and notes with the route.
+                  </p>
+
+                  <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                    {TRIP_STARTERS.map((starter) => (
+                      <button
+                        key={starter.name}
+                        type="button"
+                        onClick={() => newTrip(starter)}
+                        className="rounded-lg border bg-white p-4 text-left transition hover:-translate-y-0.5"
+                        style={{ borderColor: "var(--line)", boxShadow: "0 10px 26px rgba(17,19,21,0.05)" }}
+                      >
+                        <span className="inline-flex rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+                          {starter.label}
+                        </span>
+                        <span className="mt-3 block text-sm font-semibold" style={{ color: "var(--ink)" }}>{starter.name}</span>
+                        <span className="mt-1 block text-xs leading-5" style={{ color: "var(--muted)" }}>{starter.detail}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => newTrip()}
+                    className="mt-5 inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
+                    style={{ background: "var(--ink)" }}
+                  >
+                    <Icon name="plus" />
+                    Create blank trip
+                  </button>
+                </section>
+
+                <section className="rounded-lg border p-4 sm:p-5" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.76)" }}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                    What the planner tracks
+                  </p>
+                  <div className="mt-4 grid gap-3">
+                    {[
+                      ["1", "Add park stops", "Search NPS parks and keep each stop tied to a travel day."],
+                      ["2", "Draft the itinerary", "Use the AI draft after stops are added, then edit the notes yourself."],
+                      ["3", "Check before you go", "Packing list, route map, saved notes, print, and sharing stay with the trip."],
+                    ].map(([step, title, detail]) => (
+                      <div key={step} className="flex gap-3 rounded-lg border bg-white p-3" style={{ borderColor: "var(--line)" }}>
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white" style={{ background: "var(--accent)" }}>
+                          {step}
+                        </span>
+                        <span>
+                          <span className="block text-sm font-semibold" style={{ color: "var(--ink)" }}>{title}</span>
+                          <span className="mt-1 block text-xs leading-5" style={{ color: "var(--muted)" }}>{detail}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
             </div>
           ) : (
             <>
               <section
-                className="overflow-hidden rounded-lg border p-5 text-white sm:p-6"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(17,19,21,0.98) 0%, rgba(31,54,54,0.96) 54%, rgba(122,98,60,0.88) 100%)",
-                  borderColor: "rgba(255,255,255,0.14)",
-                  boxShadow: "0 22px 70px rgba(17,19,21,0.16)",
-                }}
+                className="rounded-lg border bg-white p-4 sm:p-5"
+                style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
               >
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/62">
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
                       <button
                         type="button"
                         onClick={() => setMobileTab("trips")}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white/10 px-2.5 text-white transition hover:bg-white/16 lg:hidden"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-white px-2.5 transition hover:bg-stone-50 lg:hidden"
+                        style={{ borderColor: "var(--line)", color: "var(--ink)" }}
                       >
                         <Icon name="chevron" className="h-3.5 w-3.5 rotate-90" />
                         Trips
                       </button>
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-white">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
                         <Icon name="route" className="h-4 w-4" />
                       </span>
-                      Current itinerary
+                      Trip summary
                     </div>
                     <input
                       type="text"
                       value={activeTrip.name}
                       onChange={(e) => updateTrip({ ...activeTrip, name: e.target.value })}
-                      className="mt-4 w-full border-none p-0 text-4xl font-semibold leading-tight text-white outline-none md:text-5xl"
-                      style={{ background: "transparent" }}
+                      className="mt-3 w-full border-none p-0 text-3xl font-semibold leading-tight outline-none md:text-4xl"
+                      style={{ background: "transparent", color: "var(--ink)" }}
                       placeholder="Trip name"
                     />
-                    <div className="mt-4 flex flex-wrap gap-2 text-sm text-white/72">
-                      <span className="inline-flex items-center gap-2 rounded-lg border border-white/14 bg-white/8 px-3 py-2">
+                    <div className="mt-4 flex flex-wrap gap-2 text-sm">
+                      <span className="inline-flex items-center gap-2 rounded-md border bg-[var(--surface)] px-3 py-2" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
                         <Icon name="calendar" className="h-4 w-4" />
                         {dateSummary(activeTrip)}
                       </span>
-                      <span className="inline-flex items-center gap-2 rounded-lg border border-white/14 bg-white/8 px-3 py-2">
+                      <span className="inline-flex items-center gap-2 rounded-md border bg-[var(--surface)] px-3 py-2" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
                         <Icon name="map" className="h-4 w-4" />
                         {stopSummary(activeTrip.stops.length)}
+                      </span>
+                      <span className="inline-flex items-center gap-2 rounded-md border bg-[var(--surface)] px-3 py-2" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
+                        <Icon name="check" className="h-4 w-4" />
+                        0 of {packingList.length} packed
+                      </span>
+                      <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+                        {user ? "Draft" : "Saved locally"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                  <div className="flex flex-wrap gap-2 xl:justify-end">
                     <ShareTripButton trip={activeTrip} />
                     <button
                       type="button"
                       onClick={saveTrip}
                       disabled={saving}
-                      className="inline-flex items-center gap-2 rounded-lg border border-white/16 px-3 py-2 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5 disabled:opacity-50"
                       style={{
-                        color: saveMsg === "saved" ? "#86efac" : saveMsg === "error" ? "#f87171" : "rgba(255,255,255,0.78)",
-                        borderColor: saveMsg === "saved" ? "rgba(134,239,172,0.3)" : saveMsg === "error" ? "rgba(248,113,113,0.3)" : "rgba(255,255,255,0.16)",
+                        color: saveMsg === "saved" ? "var(--accent)" : saveMsg === "error" ? "#b42318" : "var(--ink)",
+                        borderColor: saveMsg === "saved" ? "rgba(23,109,101,0.24)" : saveMsg === "error" ? "rgba(180,35,24,0.22)" : "var(--line)",
+                        background: saveMsg === "saved" ? "var(--accent-soft)" : "white",
                       }}
                     >
                       <Icon name="check" className="h-4 w-4" />
@@ -662,7 +813,8 @@ export default function PlannerPage() {
                     <button
                       type="button"
                       onClick={() => window.print()}
-                      className="inline-flex items-center gap-2 rounded-lg border border-white/16 px-3 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/10"
+                      className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
+                      style={{ borderColor: "var(--line)", color: "var(--ink)" }}
                     >
                       <Icon name="print" className="h-4 w-4" />
                       Print
@@ -670,7 +822,8 @@ export default function PlannerPage() {
                     <button
                       type="button"
                       onClick={() => deleteTrip(activeTrip.id)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-white/16 px-3 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/10"
+                      className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
+                      style={{ borderColor: "rgba(180,35,24,0.18)", color: "#9f241b" }}
                     >
                       <Icon name="trash" className="h-4 w-4" />
                       Delete
@@ -678,56 +831,38 @@ export default function PlannerPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                  {[
-                    { label: "Stops", value: activeTrip.stops.length.toString(), icon: "map" as IconName },
-                    { label: "Days", value: tripDays ? tripDays.toString() : "Set dates", icon: "calendar" as IconName },
-                    { label: "Pack items", value: packingList.length.toString(), icon: "check" as IconName },
-                  ].map(({ label, value, icon }) => (
-                    <div key={label} className="rounded-lg border border-white/14 bg-white/10 p-4 backdrop-blur-xl">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="min-w-0 truncate text-2xl font-semibold">{value}</p>
-                        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white/10 text-white/72">
-                          <Icon name={icon} className="h-4 w-4" />
-                        </span>
-                      </div>
-                      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/50">{label}</p>
-                    </div>
-                  ))}
+                <div className="mt-4 grid gap-3 border-t pt-4 md:grid-cols-2" style={{ borderColor: "var(--line)" }}>
+                  <label>
+                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+                      <Icon name="calendar" className="h-4 w-4" />
+                      Start date
+                    </span>
+                    <input
+                      type="date"
+                      value={activeTrip.startDate}
+                      onChange={(e) => updateTrip({ ...activeTrip, startDate: e.target.value })}
+                      className="mt-2 w-full rounded-lg border px-3 py-2.5 text-sm font-semibold outline-none"
+                      style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
+                    />
+                  </label>
+                  <label>
+                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+                      <Icon name="calendar" className="h-4 w-4" />
+                      End date
+                    </span>
+                    <input
+                      type="date"
+                      value={activeTrip.endDate}
+                      onChange={(e) => updateTrip({ ...activeTrip, endDate: e.target.value })}
+                      className="mt-2 w-full rounded-lg border px-3 py-2.5 text-sm font-semibold outline-none"
+                      style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
+                    />
+                  </label>
                 </div>
               </section>
 
               <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_370px]">
                 <section className="min-w-0 space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
-                      <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>
-                        <Icon name="calendar" className="h-4 w-4" />
-                        Start date
-                      </span>
-                      <input
-                        type="date"
-                        value={activeTrip.startDate}
-                        onChange={(e) => updateTrip({ ...activeTrip, startDate: e.target.value })}
-                        className="mt-3 w-full rounded-lg border px-3 py-3 text-sm font-semibold outline-none"
-                        style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
-                      />
-                    </label>
-                    <label className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
-                      <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>
-                        <Icon name="calendar" className="h-4 w-4" />
-                        End date
-                      </span>
-                      <input
-                        type="date"
-                        value={activeTrip.endDate}
-                        onChange={(e) => updateTrip({ ...activeTrip, endDate: e.target.value })}
-                        className="mt-3 w-full rounded-lg border px-3 py-3 text-sm font-semibold outline-none"
-                        style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
-                      />
-                    </label>
-                  </div>
-
                   <div className="rounded-lg border bg-white p-4 sm:p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
@@ -736,23 +871,8 @@ export default function PlannerPage() {
                         </p>
                         <div className="mt-1 flex flex-wrap items-center gap-3">
                           <h2 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-                            Route Builder
+                            Route builder
                           </h2>
-                          <button
-                            type="button"
-                            onClick={() => void generateItinerary()}
-                            disabled={aiLoading || !activeTrip.stops.length}
-                            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                            style={{ background: "linear-gradient(135deg, #2a6049 0%, #3d7a60 100%)", color: "white", boxShadow: "0 4px 14px rgba(42,96,73,0.3)" }}
-                            title={!activeTrip.stops.length ? "Add at least one park stop first" : "Generate AI itinerary"}
-                          >
-                            {aiLoading ? (
-                              <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3"/><path d="M12 3a9 9 0 019 9"/></svg>
-                            ) : (
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-                            )}
-                            {aiLoading ? "Generating…" : "Generate with AI"}
-                          </button>
                           {aiError && (
                             <span className="text-xs font-medium text-red-500">{aiError}</span>
                           )}
@@ -762,7 +882,7 @@ export default function PlannerPage() {
                         <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                         <input
                           type="text"
-                          placeholder="Search parks to add"
+                          placeholder="Search Yosemite, Zion, campgrounds, viewpoints..."
                           value={parkSearch}
                           onChange={(e) => setParkSearch(e.target.value)}
                           className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none"
@@ -805,20 +925,120 @@ export default function PlannerPage() {
                       </div>
                     </div>
 
+                    <div className="mt-4 flex flex-col gap-3 rounded-lg border bg-[var(--surface)] p-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--line)" }}>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Need a starting route?</p>
+                        <p className="mt-0.5 text-xs leading-5" style={{ color: "var(--muted)" }}>
+                          Uses your dates, stops, and packing needs.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void generateItinerary()}
+                        disabled={aiLoading || !activeTrip.stops.length}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45"
+                        style={{ background: "var(--accent)" }}
+                        title={!activeTrip.stops.length ? "Add at least one park stop first" : "Draft itinerary"}
+                      >
+                        {aiLoading ? (
+                          <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3"/><path d="M12 3a9 9 0 019 9"/></svg>
+                        ) : (
+                          <Icon name="route" className="h-4 w-4" />
+                        )}
+                        {aiLoading ? "Drafting..." : "Draft itinerary"}
+                      </button>
+                    </div>
+
                     {activeTrip.stops.length === 0 ? (
-                      <div className="mt-5 rounded-lg border border-dashed px-5 py-10 text-center" style={{ borderColor: "rgba(17,19,21,0.16)", background: "linear-gradient(180deg, rgba(251,251,248,0.9), rgba(255,255,255,0.72))" }}>
-                        <span
-                          className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg"
-                          style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-                        >
-                          <Icon name="map" className="h-5 w-5" />
-                        </span>
-                        <p className="mt-4 text-sm font-semibold" style={{ color: "var(--ink)" }}>
-                          No stops yet
-                        </p>
-                        <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-                          Search for a park and add it to the route.
-                        </p>
+                      <div className="mt-5 rounded-lg border bg-[var(--surface)] p-4" style={{ borderColor: "var(--line)" }}>
+                        <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(280px,0.7fr)]">
+                          <div>
+                            <p className="text-lg font-semibold" style={{ color: "var(--ink)" }}>
+                              Start with the first park or stop.
+                            </p>
+                            <p className="mt-2 max-w-xl text-sm leading-6" style={{ color: "var(--muted)" }}>
+                              Search for a park, add your first stop, then build the days around drive time, permits, and weather.
+                            </p>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setParkSearch("Yosemite")}
+                                className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
+                                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                              >
+                                Search parks
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setParkSearch("Yosemite")}
+                                className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
+                                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                              >
+                                Add Yosemite
+                              </button>
+                              <button
+                                type="button"
+                                disabled
+                                className="rounded-lg border px-3 py-2 text-sm font-semibold opacity-45"
+                                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                              >
+                                Generate with AI
+                              </button>
+                              <Link
+                                href="/explore"
+                                className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
+                                style={{ borderColor: "var(--line)", color: "var(--accent)" }}
+                              >
+                                Browse nearby parks
+                              </Link>
+                            </div>
+                            <div className="mt-5 rounded-lg border bg-white p-3" style={{ borderColor: "var(--line)" }}>
+                              <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+                                Before this trip is ready
+                              </p>
+                              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                {TRIP_READY_ITEMS.map((item) => {
+                                  const checked =
+                                    item === "Dates set" ? Boolean(activeTrip.startDate && activeTrip.endDate) :
+                                      item === "First stop added" ? activeTrip.stops.length > 0 :
+                                        item === "Notes added" ? Boolean(activeTrip.notes.trim()) :
+                                          false;
+                                  return (
+                                    <div key={item} className="flex items-center gap-2 text-sm" style={{ color: checked ? "var(--ink)" : "var(--muted)" }}>
+                                      <span
+                                        className="flex h-4 w-4 shrink-0 items-center justify-center rounded border"
+                                        style={{ borderColor: checked ? "var(--accent)" : "var(--line)", background: checked ? "var(--accent)" : "white", color: "white" }}
+                                      >
+                                        {checked && <Icon name="check" className="h-3 w-3" />}
+                                      </span>
+                                      {item}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="rounded-lg border bg-white p-3" style={{ borderColor: "var(--line)" }}>
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
+                              Route timeline
+                            </p>
+                            <div className="mt-3 space-y-3">
+                              {EMPTY_ROUTE_DAYS.map(([day, ...items]) => (
+                                <div key={day} className="rounded-lg border p-3" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.72)" }}>
+                                  <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{day}</p>
+                                  <div className="mt-2 space-y-1.5">
+                                    {items.map((item) => (
+                                      <div key={item} className="flex items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
+                                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--line)" }} />
+                                        {item}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="relative mt-5 space-y-3">
@@ -945,8 +1165,11 @@ export default function PlannerPage() {
                           <Icon name="check" className="h-4 w-4" />
                           Packing
                         </span>
-                        <span className="mt-1 block text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-                          Checklist
+                        <span className="mt-1 block text-xl font-semibold" style={{ color: "var(--ink)" }}>
+                          Review before you leave
+                        </span>
+                        <span className="mt-1 block text-xs" style={{ color: "var(--muted)" }}>
+                          0 of {packingList.length} packed
                         </span>
                       </span>
                       <span className="flex items-center gap-2">
@@ -961,14 +1184,23 @@ export default function PlannerPage() {
                     </button>
                     {showChecklist && (
                       <div className="max-h-[420px] overflow-y-auto border-t p-4" style={{ borderColor: "var(--line)" }}>
-                        <div className="space-y-2">
-                          {packingList.map((item, i) => (
-                            <label key={i} className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-stone-50">
-                              <input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-teal-700" />
-                              <span className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>
-                                {item}
-                              </span>
-                            </label>
+                        <div className="space-y-4">
+                          {groupPackingItems(packingList).map(([category, items]) => (
+                            <div key={category}>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+                                {category}
+                              </p>
+                              <div className="mt-2 space-y-1">
+                                {items.map((item) => (
+                                  <label key={item} className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-stone-50">
+                                    <input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-teal-700" />
+                                    <span className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>
+                                      {item}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -1135,11 +1367,11 @@ function ShareTripButton({ trip }: { trip: Trip }) {
       type="button"
       onClick={() => void handleShare()}
       disabled={state === "working"}
-      className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-50"
+      className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5 disabled:opacity-50"
       style={{
-        color: "rgba(255,255,255,0.78)",
-        borderColor: "rgba(255,255,255,0.16)",
-        background: state === "copied" ? "rgba(255,255,255,0.12)" : "transparent",
+        color: state === "copied" ? "var(--accent)" : "var(--ink)",
+        borderColor: state === "copied" ? "rgba(23,109,101,0.24)" : "var(--line)",
+        background: state === "copied" ? "var(--accent-soft)" : "white",
       }}
     >
       <Icon name="share" className="h-4 w-4" />

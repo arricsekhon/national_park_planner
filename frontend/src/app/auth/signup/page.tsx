@@ -75,15 +75,10 @@ export default function SignUpPage() {
     <AuthShell
       eyebrow="Create account"
       title="Start planning with TrailQuest"
-      description="Save routes, compare parks, and keep a journal tied to your park visits."
-      visualTitle="Build a better park habit."
-      visualDescription="Turn scattered park ideas into a route, a packing list, and a trail archive you can return to after every trip."
+      description="Save park ideas, compare trip basics, and keep notes from each visit."
+      visualTitle="Keep your park plans in one place."
+      visualDescription="Save the parks, routes, and notes you want before the next trail day."
       visualVariant="starting"
-      stats={[
-        { value: "400+", label: "Parks" },
-        { value: "Free", label: "Account" },
-        { value: "Local", label: "Saved" },
-      ]}
       footer={
         <>
           Already have an account?{" "}
@@ -93,7 +88,7 @@ export default function SignUpPage() {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         <GoogleAuthButton loading={googleLoading} onClick={handleGoogleSignUp} mode="signup" />
 
         <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
@@ -118,7 +113,7 @@ export default function SignUpPage() {
               placeholder="Jane Smith"
               aria-invalid={error === "Enter your full name."}
               aria-describedby={error ? errorId : undefined}
-              className="w-full rounded-lg border py-3.5 pl-10 pr-3 text-sm font-medium outline-none transition"
+              className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none transition"
               style={{ borderColor: "var(--line)", color: "var(--ink)", background: "linear-gradient(180deg,#fff,#fbfbf8)" }}
             />
           </span>
@@ -140,7 +135,7 @@ export default function SignUpPage() {
               placeholder="you@example.com"
               aria-invalid={Boolean(error && error !== "Enter your full name." && !error.includes("Password"))}
               aria-describedby={error ? errorId : undefined}
-              className="w-full rounded-lg border py-3.5 pl-10 pr-3 text-sm font-medium outline-none transition"
+              className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none transition"
               style={{ borderColor: "var(--line)", color: "var(--ink)", background: "linear-gradient(180deg,#fff,#fbfbf8)" }}
             />
           </span>
@@ -162,7 +157,7 @@ export default function SignUpPage() {
               placeholder="At least 6 characters"
               aria-invalid={Boolean(password && !passwordLongEnough)}
               aria-describedby={`${rulesId}${error ? ` ${errorId}` : ""}`}
-              className="w-full rounded-lg border py-3.5 pl-10 pr-12 text-sm font-medium outline-none transition"
+              className="w-full rounded-lg border py-3 pl-10 pr-12 text-sm font-medium outline-none transition"
               style={{
                 borderColor: password && !passwordLongEnough ? "rgba(185,28,28,0.36)" : "var(--line)",
                 color: "var(--ink)",
@@ -198,7 +193,7 @@ export default function SignUpPage() {
               placeholder="Repeat password"
               aria-invalid={Boolean(confirm && !passwordsMatch)}
               aria-describedby={`${rulesId}${error ? ` ${errorId}` : ""}`}
-              className="w-full rounded-lg border py-3.5 pl-10 pr-3 text-sm font-medium outline-none transition"
+              className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none transition"
               style={{
                 borderColor: confirm && !passwordsMatch ? "rgba(185,28,28,0.36)" : "var(--line)",
                 color: "var(--ink)",
@@ -208,7 +203,7 @@ export default function SignUpPage() {
           </span>
         </div>
 
-        <div id={rulesId} aria-live="polite" className="grid gap-2 rounded-lg border p-3" style={{ borderColor: "rgba(23,109,101,0.14)", background: "linear-gradient(180deg,var(--surface),#fff)" }}>
+        <div id={rulesId} aria-live="polite" className="grid gap-2 rounded-lg border p-2.5" style={{ borderColor: "rgba(23,109,101,0.14)", background: "linear-gradient(180deg,var(--surface),#fff)" }}>
           <PasswordRule active={passwordLongEnough} label="At least 6 characters" />
           <PasswordRule active={Boolean(confirm) && password === confirm} label="Passwords match" muted={!confirm} />
         </div>
@@ -223,7 +218,7 @@ export default function SignUpPage() {
           type="submit"
           disabled={loading}
           aria-busy={loading}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:translate-y-0 disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:translate-y-0 disabled:opacity-50"
           style={{ background: "linear-gradient(135deg,var(--ink),#263237)", boxShadow: "0 16px 34px rgba(17,19,21,0.18)" }}
         >
           {loading ? "Creating account..." : "Create account"}

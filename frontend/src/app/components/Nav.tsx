@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import BrandLogo from "./BrandLogo";
 
 const LINKS = [
   { href: "/explore", label: "Explore" },
@@ -98,47 +99,30 @@ export default function Nav() {
     <nav
       className={`app-nav fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${transparent ? "app-nav--transparent" : "app-nav--solid"}`}
       style={{
-        background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,0.28), transparent)" : "rgba(251,251,248,0.96)",
-        backdropFilter: transparent ? "none" : "blur(24px) saturate(160%)",
-        borderBottom: transparent ? "1px solid transparent" : "1px solid rgba(17,19,21,0.08)",
-        boxShadow: transparent ? "none" : "0 10px 40px rgba(17,19,21,0.06)",
+        background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,0.24), rgba(0,0,0,0.02))" : "rgba(251,251,248,0.92)",
+        backdropFilter: transparent ? "none" : "blur(14px) saturate(120%)",
+        borderBottom: transparent ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(17,19,21,0.07)",
+        boxShadow: transparent ? "none" : "0 4px 14px rgba(17,19,21,0.035)",
         paddingTop: "env(safe-area-inset-top, 0px)",
       }}
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-8 h-[66px] flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105"
-            style={{
-              background: onHero ? "rgba(255,255,255,0.16)" : "rgba(17,19,21,0.06)",
-              border: onHero ? "1px solid rgba(255,255,255,0.24)" : "1px solid rgba(17,19,21,0.08)",
-              color: onHero ? "white" : "var(--ink)",
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M2 21L8 8l4.5 8L16 10l6 11H2z" />
-            </svg>
-          </div>
-          <span
-            className="font-semibold text-[15px]"
-            style={{ color: onHero ? "white" : "var(--ink)" }}
-          >
-            TrailQuest
-          </span>
+        <Link href="/" className="group transition-opacity hover:opacity-85">
+          <BrandLogo textColor={onHero ? "white" : "var(--ink)"} />
         </Link>
 
         {isAuthPage ? (
           <div
-            className="hidden md:flex items-center gap-1 rounded-full px-1.5 py-1.5"
-            style={{
-              background: "rgba(17,19,21,0.04)",
-              border: "1px solid rgba(17,19,21,0.06)",
+          className="hidden items-center gap-0.5 rounded-lg px-0.5 py-0.5 md:flex"
+          style={{
+            background: "rgba(17,19,21,0.03)",
+            border: "1px solid rgba(17,19,21,0.05)",
             }}
           >
             <Link
               href="/auth/signin"
-              className="px-4 py-2 text-sm font-semibold transition-colors rounded-full"
+              className="rounded-md px-3 py-2 text-sm font-semibold transition-colors"
               style={{
                 color: signInActive ? "white" : "rgba(17,19,21,0.68)",
                 background: signInActive ? "var(--ink)" : "transparent",
@@ -148,7 +132,7 @@ export default function Nav() {
             </Link>
             <Link
               href="/auth/signup"
-              className="px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95"
+              className="rounded-md px-3 py-2 text-sm font-semibold transition-all active:scale-95"
               style={{
                 color: signUpActive ? "white" : "rgba(17,19,21,0.68)",
                 background: signUpActive ? "var(--ink)" : "transparent",
@@ -161,10 +145,10 @@ export default function Nav() {
         <>
         {/* Desktop nav */}
         <div
-          className="hidden md:flex items-center gap-1 rounded-full px-1.5 py-1.5"
+          className="hidden items-center gap-0.5 rounded-lg px-0.5 py-0.5 md:flex"
           style={{
-            background: onHero ? "rgba(255,255,255,0.1)" : "rgba(17,19,21,0.04)",
-            border: onHero ? "1px solid rgba(255,255,255,0.16)" : "1px solid rgba(17,19,21,0.06)",
+            background: onHero ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.48)",
+            border: onHero ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(17,19,21,0.06)",
           }}
         >
           {LINKS.map(({ href, label }) => {
@@ -173,7 +157,7 @@ export default function Nav() {
               <Link
                 key={href}
                 href={href}
-                className="relative px-4 py-2 text-sm font-medium rounded-full transition-all duration-200"
+                className="relative rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200"
                 style={{
                   color: active ? (onHero ? "var(--ink)" : "white") : (onHero ? "rgba(255,255,255,0.76)" : "rgba(17,19,21,0.64)"),
                   background: active ? (onHero ? "rgba(255,255,255,0.86)" : "var(--ink)") : "transparent",
@@ -193,7 +177,7 @@ export default function Nav() {
                   <button
                     type="button"
                     onClick={() => setUserMenuOpen((o) => !o)}
-                    className="flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all hover:bg-white/10"
+                    className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 transition-all hover:bg-white/10"
                     style={{ color: onHero ? "white" : "var(--ink)" }}
                     aria-expanded={userMenuOpen}
                     aria-controls={userMenuId}
@@ -268,7 +252,7 @@ export default function Nav() {
                 <>
                   <Link
                     href="/auth/signin"
-                    className="px-4 py-2 text-sm font-medium transition-colors rounded-full hover:bg-white/10"
+                    className="rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-white/10"
                     style={{
                       color: signInActive ? (onHero ? "var(--ink)" : "white") : (onHero ? "rgba(255,255,255,0.82)" : "rgba(17,19,21,0.68)"),
                       background: signInActive ? (onHero ? "rgba(255,255,255,0.86)" : "var(--ink)") : "transparent",
@@ -278,7 +262,7 @@ export default function Nav() {
                   </Link>
                   <Link
                     href="/auth/signup"
-                    className="px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 hover:bg-white/10"
+                    className="rounded-md px-3 py-2 text-sm font-semibold transition-all hover:bg-white/10 active:scale-95"
                     style={{
                       color: signUpActive ? (onHero ? "var(--ink)" : "white") : (onHero ? "rgba(255,255,255,0.82)" : "rgba(17,19,21,0.68)"),
                       background: signUpActive ? (onHero ? "rgba(255,255,255,0.86)" : "var(--ink)") : "transparent",
@@ -372,7 +356,7 @@ export default function Nav() {
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="btn-ink inline-block px-4 py-2.5 rounded-full text-sm font-semibold text-center"
+                  className="btn-ink inline-block rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
                   onClick={() => setMenuOpen(false)}
                 >
                   Create account →

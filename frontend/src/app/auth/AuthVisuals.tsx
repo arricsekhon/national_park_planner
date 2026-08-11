@@ -43,27 +43,24 @@ export function AuthVisualPanel({ variant }: { variant: AuthVisualVariant }) {
 export function MobileAuthAccent({
   eyebrow,
   title,
-  visual,
 }: {
   eyebrow: string;
   title: string;
-  visual: (typeof VISUAL_STYLES)[AuthVisualVariant];
 }) {
   return (
     <section
       className="relative mb-4 overflow-hidden rounded-xl border p-4 text-white lg:hidden"
-      style={{ background: visual.panel, borderColor: "rgba(17,19,21,0.1)", boxShadow: "var(--shadow-sm)" }}
+      style={{
+        backgroundImage: "linear-gradient(90deg, rgba(9,14,14,0.62), rgba(9,14,14,0.18)), url('/auth-grand-teton.webp')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        borderColor: "rgba(17,19,21,0.1)",
+        boxShadow: "var(--shadow-sm)",
+      }}
       aria-label={eyebrow}
     >
-      <div className="absolute inset-0 opacity-35" style={{ backgroundImage: visual.overlay, backgroundSize: "32px 32px" }} />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_86%_0%,rgba(255,255,255,0.18),transparent_12rem)]" />
-      <div className="relative flex items-start gap-3">
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/16"
-          style={{ background: visual.markBackground }}
-        >
-          <AuthIcon name={visual.mark} className="h-5 w-5" />
-        </span>
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,14,14,0.02),rgba(9,14,14,0.42))]" />
+      <div className="relative">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/58">{eyebrow}</p>
           <p className="mt-1 text-lg font-semibold leading-snug">{title}</p>

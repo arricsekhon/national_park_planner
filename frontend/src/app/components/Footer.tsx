@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BrandLogo from "./BrandLogo";
 
 const PRIMARY_LINKS = [
   { href: "/explore", label: "Explore" },
@@ -15,20 +16,15 @@ const ACCOUNT_LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="mt-auto border-t" style={{ borderColor: "var(--line)", background: "var(--ink)", color: "white" }}>
-      <div className="premium-shell py-10">
+    <footer className="mt-auto border-t" style={{ borderColor: "rgba(255,255,255,0.08)", background: "var(--ink)", color: "white" }}>
+      <div className="premium-shell py-9">
         <div className="grid gap-8 md:grid-cols-[1fr_auto_auto] md:items-start">
           <div className="max-w-sm">
-            <Link href="/" className="flex w-fit items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 bg-white/10">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M2 21 8.2 7.6l4.5 7.9 3.2-5.4L22 21H2Z" />
-                </svg>
-              </span>
-              <span className="text-base font-semibold">TrailQuest</span>
+            <Link href="/" className="block w-fit transition-opacity hover:opacity-90">
+              <BrandLogo variant="full" textColor="white" tone="light" className="[&>span:first-child]:h-8 [&>span:first-child]:w-[70px] [&>span:last-child>span:first-child]:text-base [&>span:last-child>span:last-child]:text-[9px]" />
             </Link>
             <p className="mt-4 text-sm leading-6 text-white/58">
-              Search parks, shape trip plans, and keep trail notes in one quiet workspace.
+              Compare parks, check the trip basics, and keep the notes you need before heading out.
             </p>
           </div>
 
@@ -37,7 +33,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-9 flex flex-col gap-3 border-t pt-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-          <p>TrailQuest national park planner</p>
+          <p>TrailQuest national park planner · built with NPS park data</p>
           <a
             href="https://www.nps.gov"
             target="_blank"

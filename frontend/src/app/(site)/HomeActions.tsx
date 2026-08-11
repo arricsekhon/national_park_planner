@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const SEARCH_CHIPS = ["National parks", "California", "Utah", "Colorado", "Montana", "Wyoming", "Alaska"];
+const SEARCH_CHIPS = ["Yosemite", "easy hikes", "camping", "no entry fee"];
 
 export function HeroSearchAndStats() {
   const router = useRouter();
@@ -20,20 +20,20 @@ export function HeroSearchAndStats() {
     <>
       <form
         onSubmit={handleSearch}
-        className="animate-hero-3 mx-auto mt-8 flex w-full max-w-2xl items-center gap-2 rounded-2xl p-1.5 lg:mx-0"
-        style={{ background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.22)", backdropFilter: "blur(16px)" }}
+        className="animate-hero-3 mt-6 flex w-full max-w-full min-w-0 flex-col gap-1.5 rounded-lg p-1.5 sm:max-w-lg sm:flex-row sm:items-center"
+        style={{ background: "rgba(255,255,255,0.88)", border: "1px solid rgba(255,255,255,0.24)", boxShadow: "0 14px 38px rgba(0,0,0,0.16)" }}
       >
         <input
           type="search"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search parks, states, activities..."
-          className="min-h-11 flex-1 rounded-xl border-0 bg-white/90 px-4 text-[15px] text-[var(--ink)] shadow-none placeholder:text-black/35 focus:outline-none"
+          placeholder="Search park, state, activity"
+          className="min-h-10 w-full min-w-0 rounded-md border-0 bg-transparent px-3 text-sm text-[var(--ink)] shadow-none placeholder:text-black/38 focus:outline-none sm:flex-1"
           aria-label="Search parks"
         />
         <button
           type="submit"
-          className="shrink-0 min-h-11 rounded-xl px-5 text-sm font-semibold transition-all hover:opacity-90 active:scale-95"
+          className="min-h-10 w-full shrink-0 rounded-md px-4 text-sm font-semibold transition-all hover:opacity-90 active:scale-95 sm:w-auto"
           style={{ background: "var(--ink)", color: "white" }}
         >
           Search
@@ -41,15 +41,14 @@ export function HeroSearchAndStats() {
       </form>
 
       <div
-        className="animate-hero-4 mt-4"
-        style={{ WebkitMaskImage: "linear-gradient(to right, black 82%, transparent 100%)", maskImage: "linear-gradient(to right, black 82%, transparent 100%)" }}
+        className="animate-hero-4 mt-3"
       >
         <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
           {SEARCH_CHIPS.map((chip) => (
             <Link
               key={chip}
               href={`/explore?q=${encodeURIComponent(chip)}`}
-              className="shrink-0 snap-start rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium text-white/75 transition-all hover:bg-white/18 hover:text-white active:scale-95"
+              className="shrink-0 snap-start rounded-md border border-white/18 bg-black/24 px-3 py-1.5 text-xs font-medium text-white/76 transition-all hover:bg-black/34 hover:text-white active:scale-95"
             >
               {chip}
             </Link>

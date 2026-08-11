@@ -21,9 +21,42 @@ const US_STATES = [
 ];
 
 const ACTIVITY_FILTERS = ["Hiking", "Camping", "Fishing", "Swimming", "Rock Climbing", "Wildlife Watching", "Cycling", "Kayaking"];
+const QUICK_FILTERS = ["Hiking", "Camping", "No entry fee", "Pets allowed", "Permit required"];
+const SITE_TYPE_FILTERS = ["National Park", "National Monument", "National Historical Park"];
+const DIFFICULTY_FILTERS = ["Easy", "Moderate", "Hard"];
+const FEE_FILTERS = ["Free", "Under $20", "$20+"];
+const SEASON_FILTERS = ["Spring", "Summer", "Fall", "Winter"];
+const TRIP_NEEDS = ["Pets allowed", "Shuttle required", "Permit required", "Good for families"];
+
+function getEntranceCost(park: Park) {
+  const fee = park.entranceFees?.[0];
+  if (!fee) return null;
+  const cost = Number.parseFloat(fee.cost);
+  return Number.isFinite(cost) ? cost : null;
+}
+
+function getBestSeason(park: Park) {
+  const states = park.states.split(",").map((state) => state.trim());
+  if (states.some((state) => ["AZ", "UT", "NV", "TX"].includes(state))) return "Oct-Apr";
+  if (states.some((state) => ["AK", "MT", "WY", "CO", "ME"].includes(state))) return "Jun-Sep";
+  if (states.some((state) => ["FL", "HI", "VI", "PR"].includes(state))) return "Nov-Mar";
+  return "Spring-Fall";
+}
+
+function getPlanningNotes(park: Park) {
+  const activities = park.activities?.map((activity) => activity.name.toLowerCase()) ?? [];
+  const notes = [];
+  if (activities.some((activity) => activity.includes("hiking"))) notes.push("Check trail conditions");
+  if (activities.some((activity) => activity.includes("camping"))) notes.push("Reserve camping early");
+  if (park.designation?.includes("National Park")) notes.push("Parking fills early");
+  if (park.states.includes("CA") || park.states.includes("UT") || park.states.includes("AZ")) notes.push("Start before heat");
+  if (notes.length === 0) notes.push("Check hours before you go");
+  return notes.slice(0, 2);
+}
 
 function ExploreContent() {
   const searchParams = useSearchParams();
+  const { compareList, clearCompare } = useParkData();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [stateCode, setStateCode] = useState("");
   const [parks, setParks] = useState<Park[]>([]);
@@ -38,6 +71,13 @@ function ExploreContent() {
   const [nearMeLoading, setNearMeLoading] = useState(false);
   const [nearMeError, setNearMeError] = useState("");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [noEntryFee, setNoEntryFee] = useState(false);
+  const [tripNeeds, setTripNeeds] = useState<string[]>([]);
+  const [siteTypeFilter, setSiteTypeFilter] = useState("");
+  const [feeFilter, setFeeFilter] = useState("");
+  const [seasonFilter, setSeasonFilter] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [sortBy, setSortBy] = useState("Recommended");
   const requestIdRef = useRef(0);
 
   const fetchParks = useCallback(async (q: string, state: string, limit = 50) => {
@@ -106,6 +146,18 @@ function ExploreContent() {
         p.activities?.some((a) => a.name.toLowerCase().includes(activityFilter.toLowerCase()))
       );
     }
+    if (siteTypeFilter) {
+      result = result.filter((p) => p.designation === siteTypeFilter);
+    }
+    if (noEntryFee || feeFilter) {
+      result = result.filter((p) => {
+        const cost = getEntranceCost(p);
+        if (noEntryFee || feeFilter === "Free") return cost === 0;
+        if (feeFilter === "Under $20") return cost !== null && cost > 0 && cost < 20;
+        if (feeFilter === "$20+") return cost !== null && cost >= 20;
+        return true;
+      });
+    }
     if (userLocation) {
       result = [...result].sort((a, b) => {
         const ca = parseLatLong(a.latLong);
@@ -115,8 +167,16 @@ function ExploreContent() {
         return da - db;
       });
     }
+    if (sortBy !== "Recommended") {
+      result = [...result].sort((a, b) => {
+        if (sortBy === "Name") return a.fullName.localeCompare(b.fullName);
+        if (sortBy === "State") return a.states.localeCompare(b.states) || a.fullName.localeCompare(b.fullName);
+        if (sortBy === "Entry fee") return (getEntranceCost(a) ?? 999) - (getEntranceCost(b) ?? 999);
+        return 0;
+      });
+    }
     return result;
-  }, [parks, activityFilter, npOnly, userLocation]);
+  }, [parks, activityFilter, npOnly, userLocation, siteTypeFilter, noEntryFee, feeFilter, sortBy]);
 
   const handleNearMe = () => {
     if (userLocation) {
@@ -153,57 +213,70 @@ function ExploreContent() {
     setUserLocation(null);
     fetchParks(query, stateCode);
   };
-  const npCount = parks.filter((p) => p.designation === "National Park").length;
-  const hasActiveFilters = Boolean(query || stateCode || activityFilter || npOnly || userLocation);
-  const activeFilterCount = [query, stateCode, activityFilter, npOnly, userLocation].filter(Boolean).length;
-  const sheetFilterCount = [stateCode, activityFilter, npOnly].filter(Boolean).length;
+  const toggleTripNeed = (need: string) => {
+    setTripNeeds((current) => current.includes(need) ? current.filter((item) => item !== need) : [...current, need]);
+  };
+  const activeLabels = [
+    query ? `Search: ${query}` : "",
+    stateCode,
+    activityFilter,
+    npOnly ? "National Parks" : "",
+    userLocation ? "Nearest first" : "",
+    noEntryFee ? "Free entry" : "",
+    ...tripNeeds,
+    siteTypeFilter,
+    feeFilter,
+    seasonFilter,
+    difficultyFilter,
+  ].filter(Boolean);
+  const hasActiveFilters = activeLabels.length > 0;
+  const activeFilterCount = activeLabels.length;
+  const sheetFilterCount = [stateCode, activityFilter, npOnly, noEntryFee, siteTypeFilter, feeFilter, seasonFilter, difficultyFilter, ...tripNeeds].filter(Boolean).length;
   const clearFilters = () => {
     setQuery("");
     setStateCode("");
     setActivityFilter("");
     setNpOnly(false);
     setUserLocation(null);
+    setNoEntryFee(false);
+    setTripNeeds([]);
+    setSiteTypeFilter("");
+    setFeeFilter("");
+    setSeasonFilter("");
+    setDifficultyFilter("");
     setFilterSheetOpen(false);
     void fetchParks("", "");
   };
-  const resultText = userLocation
-    ? `${displayParks.length} nearby NPS sites`
-    : npOnly
-      ? `${displayParks.length} of ${npCount} national parks`
-      : activityFilter
-        ? `${displayParks.length} NPS sites · ${activityFilter}`
-        : `${parks.length} of ${total} NPS sites`;
-
   return (
     <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
       <div className="mx-auto flex min-h-[calc(100vh-66px)] max-w-[1680px] flex-col px-4 py-4 sm:px-6">
         <section
-          className="relative z-20 mb-4 overflow-hidden rounded-[1.75rem] border p-3 sm:rounded-[2.2rem] sm:p-5"
+          className="relative z-20 mb-4 overflow-hidden rounded-2xl border p-3 sm:p-5"
           style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.78)", boxShadow: "var(--shadow-card)", backdropFilter: "blur(24px) saturate(145%)" }}
         >
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_10%,rgba(220,233,243,0.8),transparent_24rem),radial-gradient(circle_at_88%_20%,rgba(229,242,239,0.9),transparent_26rem)]" />
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(220,233,243,0.5),rgba(255,255,255,0.86),rgba(229,242,239,0.58))]" />
           <div className="flex flex-col gap-3 sm:gap-5">
             <div className="max-w-2xl">
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.24em] sm:mb-2" style={{ color: "var(--accent)" }}>
                 Explore
               </p>
-              <h1 className="text-2xl font-semibold sm:text-4xl lg:text-6xl" style={{ color: "var(--ink)" }}>
-                Find your next park.
+              <h1 className="text-2xl font-semibold sm:text-4xl lg:text-5xl" style={{ color: "var(--ink)" }}>
+                Find a park that fits your trip.
               </h1>
               <p className="hidden sm:block mt-3 max-w-xl text-sm leading-6 sm:text-base" style={{ color: "var(--muted)" }}>
-                Search the park system, filter by activity, and build a short list from a clean visual browser.
+                Search by park, state, trail type, entry fee, season, or trip constraint.
               </p>
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="mt-3 flex flex-col gap-2.5 sm:mt-6 sm:gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_9.5rem_auto]">
+          <form onSubmit={handleSearch} className="mt-3 flex flex-col gap-2.5 sm:mt-5 sm:gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_9.5rem_auto]">
             <div className="relative">
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search parks, trails, wildlife..."
-                className="min-h-12 w-full rounded-full border px-5 pr-16 text-[15px] font-medium shadow-none transition-all sm:min-h-14"
+                placeholder="Search parks, trails, fees, season..."
+                className="min-h-11 w-full rounded-lg border px-4 pr-16 text-[15px] font-medium shadow-none transition-all sm:min-h-12"
                 style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
               />
               {query && (
@@ -233,7 +306,7 @@ function ExploreContent() {
               <select
                 value={stateCode}
                 onChange={(e) => setStateCode(e.target.value)}
-                className="hidden min-h-12 w-36 min-w-0 flex-none rounded-full border px-4 text-sm font-semibold shadow-none sm:block sm:min-h-14 sm:w-44 lg:w-auto"
+                className="hidden min-h-11 w-36 min-w-0 flex-none rounded-lg border px-4 text-sm font-semibold shadow-none sm:block sm:min-h-12 sm:w-44 lg:w-auto"
                 style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
               >
                 {US_STATES.map(([code, name]) => (
@@ -243,8 +316,8 @@ function ExploreContent() {
 
               <button
                 type="submit"
-                className="min-h-12 flex-1 rounded-full px-5 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-95 sm:min-h-14 sm:flex-none sm:px-7"
-                style={{ background: "var(--ink)", boxShadow: "0 14px 34px rgba(17,19,21,0.16)" }}
+                className="min-h-11 flex-1 rounded-lg px-5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95 sm:min-h-12 sm:flex-none sm:px-7"
+                style={{ background: "var(--ink)" }}
               >
                 Search
               </button>
@@ -252,7 +325,7 @@ function ExploreContent() {
               <button
                 type="button"
                 onClick={() => setFilterSheetOpen(true)}
-                className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition active:scale-95 sm:hidden"
+                className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border px-5 text-sm font-semibold transition active:scale-95 sm:hidden"
                 style={{ background: "rgba(255,255,255,0.78)", borderColor: "var(--line)", color: "var(--ink)" }}
                 aria-haspopup="dialog"
                 aria-expanded={filterSheetOpen}
@@ -274,17 +347,17 @@ function ExploreContent() {
 
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
             <p className="order-first shrink-0 text-xs font-semibold uppercase tracking-[0.16em] lg:order-last" style={{ color: "var(--muted)" }}>
-              {loading ? "Searching..." : resultText}
+              {loading ? "Loading park details..." : `${displayParks.length} parks found`}
             </p>
 
             <div className="relative lg:order-first">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 pr-10 [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 pr-10 [scrollbar-width:none] sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pr-0 [&::-webkit-scrollbar]:hidden">
               {/* Near me chip */}
               <button
                 type="button"
                 onClick={handleNearMe}
                 disabled={nearMeLoading}
-                className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 sm:px-4"
+                className="flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-all active:scale-95 disabled:opacity-40"
                 style={{
                   background: userLocation ? "var(--accent)" : "rgba(255,255,255,0.7)",
                   color: userLocation ? "white" : "var(--muted)",
@@ -314,7 +387,7 @@ function ExploreContent() {
               <button
                 type="button"
                 onClick={() => setNpOnly((v) => !v)}
-                className="hidden shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 sm:flex sm:px-4"
+                className="flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-all active:scale-95"
                 style={{
                   background: npOnly ? "#a96f2d" : "rgba(255,255,255,0.7)",
                   color: npOnly ? "white" : "var(--muted)",
@@ -330,30 +403,25 @@ function ExploreContent() {
                 National Parks only
               </button>
 
-              <span className="mx-1 hidden w-px self-stretch sm:block" style={{ background: "var(--line)" }} aria-hidden="true" />
-
-              <button
-                type="button"
-                onClick={() => setActivityFilter("")}
-                className="hidden shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all active:scale-95 sm:block sm:px-4"
-                style={{
-                  background: activityFilter === "" ? "var(--ink)" : "rgba(255,255,255,0.7)",
-                  color: activityFilter === "" ? "white" : "var(--muted)",
-                  border: "1px solid var(--line)",
-                }}
-              >
-                All activities
-              </button>
-              {ACTIVITY_FILTERS.map((act) => (
+              {QUICK_FILTERS.map((act) => (
                 <button
                   type="button"
                   key={act}
-                  onClick={() => setActivityFilter(activityFilter === act ? "" : act)}
-                  className="hidden shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all hover:-translate-y-0.5 active:scale-95 sm:block sm:px-4"
+                  onClick={() => {
+                    if (act === "No entry fee") {
+                      setNoEntryFee((value) => !value);
+                      setFeeFilter("");
+                    } else if (act === "Pets allowed" || act === "Permit required") {
+                      toggleTripNeed(act);
+                    } else {
+                      setActivityFilter(activityFilter === act ? "" : act);
+                    }
+                  }}
+                  className="min-h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-all hover:-translate-y-0.5 active:scale-95"
                   style={{
-                    background: activityFilter === act ? "var(--accent)" : "rgba(255,255,255,0.7)",
-                    color: activityFilter === act ? "white" : "var(--muted)",
-                    border: `1px solid ${activityFilter === act ? "transparent" : "var(--line)"}`,
+                    background: activityFilter === act || (act === "No entry fee" && noEntryFee) || tripNeeds.includes(act) ? "var(--accent)" : "rgba(255,255,255,0.7)",
+                    color: activityFilter === act || (act === "No entry fee" && noEntryFee) || tripNeeds.includes(act) ? "white" : "var(--muted)",
+                    border: `1px solid ${activityFilter === act || (act === "No entry fee" && noEntryFee) || tripNeeds.includes(act) ? "transparent" : "var(--line)"}`,
                   }}
                 >
                   {act}
@@ -369,16 +437,14 @@ function ExploreContent() {
           </div>
 
           {hasActiveFilters && (
-            <div className="mt-3 flex flex-col gap-2 rounded-2xl border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "rgba(23,109,101,0.16)", background: "rgba(255,255,255,0.62)" }}>
+            <div className="mt-3 flex flex-col gap-2 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "rgba(23,109,101,0.16)", background: "rgba(255,255,255,0.62)" }}>
               <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--muted)" }}>
                 <span className="mr-1 uppercase tracking-[0.14em]" style={{ color: "var(--accent)" }}>
                   {activeFilterCount} active
                 </span>
-                {query && <span className="rounded-full bg-white px-2.5 py-1">Search: {query}</span>}
-                {stateCode && <span className="rounded-full bg-white px-2.5 py-1">{stateCode}</span>}
-                {activityFilter && <span className="rounded-full bg-white px-2.5 py-1">{activityFilter}</span>}
-                {npOnly && <span className="rounded-full bg-white px-2.5 py-1">National Parks</span>}
-                {userLocation && <span className="rounded-full bg-white px-2.5 py-1">Nearest first</span>}
+                {activeLabels.map((label) => (
+                  <span key={label} className="rounded-full bg-white px-2.5 py-1">{label}</span>
+                ))}
               </div>
               <button
                 type="button"
@@ -402,7 +468,7 @@ function ExploreContent() {
               aria-label="Close filters"
             />
             <div
-              className="absolute inset-x-0 bottom-0 rounded-t-[1.75rem] border px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-6 shadow-2xl"
+              className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-[1.75rem] border px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-6 shadow-2xl"
               style={{ background: "var(--surface)", borderColor: "rgba(255,255,255,0.82)" }}
             >
               <div className="mb-4 flex items-center justify-between gap-4">
@@ -469,6 +535,15 @@ function ExploreContent() {
                     {npOnly ? "✓" : ""}
                   </span>
                 </button>
+
+                <FilterGroup title="Site type" options={SITE_TYPE_FILTERS} value={siteTypeFilter} onChange={setSiteTypeFilter} />
+                <FilterGroup title="Difficulty" options={DIFFICULTY_FILTERS} value={difficultyFilter} onChange={setDifficultyFilter} />
+                <FilterGroup title="Entry fee" options={FEE_FILTERS} value={feeFilter} onChange={(value) => {
+                  setFeeFilter(value);
+                  setNoEntryFee(value === "Free");
+                }} />
+                <FilterGroup title="Best season" options={SEASON_FILTERS} value={seasonFilter} onChange={setSeasonFilter} />
+                <TripNeedsFilter values={tripNeeds} onToggle={toggleTripNeed} />
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-2">
@@ -493,29 +568,80 @@ function ExploreContent() {
           </div>
         )}
 
-        <section className="flex-1 overflow-hidden">
-          <div
-            className="flex min-h-[580px] flex-col overflow-hidden rounded-[2rem] border"
-            style={{ background: "rgba(255,255,255,0.68)", borderColor: "rgba(255,255,255,0.76)", boxShadow: "var(--shadow-card)", backdropFilter: "blur(20px)" }}
-          >
-            <div className="flex items-start justify-between gap-4 border-b px-5 py-4" style={{ borderColor: "var(--line)" }}>
+        <section className="grid flex-1 gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
+          <aside className="hidden self-start rounded-lg border bg-white/78 p-4 lg:sticky lg:block lg:top-[calc(var(--nav-h)+16px)]" style={{ borderColor: "var(--line)" }}>
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-                  {npOnly ? "National Parks" : "NPS Sites"}
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-                  {loading ? "Searching…" : resultText}
-                </h2>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>Filters</p>
+                <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>Narrow by trip basics.</p>
               </div>
-              {error && <p className="max-w-[180px] text-right text-xs font-medium text-red-600">{error}</p>}
+              {hasActiveFilters && (
+                <button type="button" onClick={clearFilters} className="text-xs font-semibold" style={{ color: "var(--ink)" }}>
+                  Clear
+                </button>
+              )}
             </div>
 
-            <div className="flex-1 overflow-y-auto px-3 pb-4 pt-3 sm:px-4">
+            <FilterGroup title="Site type" options={SITE_TYPE_FILTERS} value={siteTypeFilter} onChange={setSiteTypeFilter} />
+            <FilterGroup title="Difficulty" options={DIFFICULTY_FILTERS} value={difficultyFilter} onChange={setDifficultyFilter} />
+            <FilterGroup title="Entry fee" options={FEE_FILTERS} value={feeFilter} onChange={(value) => {
+              setFeeFilter(value);
+              setNoEntryFee(value === "Free");
+            }} />
+            <FilterGroup title="Best season" options={SEASON_FILTERS} value={seasonFilter} onChange={setSeasonFilter} />
+            <TripNeedsFilter values={tripNeeds} onToggle={toggleTripNeed} />
+          </aside>
+
+          <div
+            className="flex min-h-[580px] min-w-0 flex-col overflow-hidden rounded-lg border"
+            style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.76)", boxShadow: "var(--shadow-card)", backdropFilter: "blur(18px)" }}
+          >
+            <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--line)" }}>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
+                  {npOnly ? "National Parks" : "NPS sites"}
+                </p>
+                <h2 className="mt-1 text-xl font-semibold" style={{ color: "var(--ink)" }}>
+                  {loading ? "Loading park details, fees, and alerts..." : `${displayParks.length} parks found`}
+                </h2>
+                {activeLabels.length > 0 && (
+                  <p className="mt-1 max-w-2xl truncate text-xs font-medium" style={{ color: "var(--muted)" }}>
+                    {activeLabels.join(" · ")}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {error && <p className="text-xs font-medium text-red-600">{error}</p>}
+                <select
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value)}
+                  className="min-h-10 rounded-lg border px-3 text-xs font-semibold"
+                  style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
+                  aria-label="Sort parks"
+                >
+                  {["Recommended", "Entry fee", "Name", "State"].map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="min-h-10 rounded-lg border px-3 text-xs font-semibold transition hover:bg-white"
+                    style={{ background: "rgba(255,255,255,0.68)", borderColor: "var(--line)", color: "var(--ink)" }}
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-3 pb-24 pt-3 sm:px-4">
               {loading ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="animate-pulse rounded-[1.6rem] border p-3" style={{ background: "rgba(255,255,255,0.72)", borderColor: "var(--line)" }}>
-                      <div className="h-40 rounded-[1.15rem]" style={{ background: "var(--linen)" }} />
+                    <div key={i} className="animate-pulse rounded-lg border p-3" style={{ background: "rgba(255,255,255,0.72)", borderColor: "var(--line)" }}>
+                      <div className="h-40 rounded-lg" style={{ background: "var(--linen)" }} />
                       <div className="mt-4 space-y-2">
                         <div className="h-4 w-3/4 rounded-full" style={{ background: "var(--linen)" }} />
                         <div className="h-3 w-full rounded-full" style={{ background: "var(--linen)" }} />
@@ -525,25 +651,25 @@ function ExploreContent() {
                   ))}
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {displayParks.length === 0 && (
-                    <div className="rounded-[1.6rem] border px-6 py-16 text-center md:col-span-2 xl:col-span-3 2xl:col-span-4" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.7)" }}>
-                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "var(--surface-soft)" }}>
+                    <div className="rounded-lg border px-6 py-16 text-center md:col-span-2 xl:col-span-3" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.7)" }}>
+                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg" style={{ background: "var(--surface-soft)" }}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/>
                         </svg>
                       </div>
-                      <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>No parks found</p>
-                      <p className="mt-2 max-w-xs mx-auto text-sm leading-6" style={{ color: "var(--muted)" }}>
-                        Try a different keyword, change the state, or clear the activity filter.
+                      <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>No parks match these filters</p>
+                      <p className="mx-auto mt-2 max-w-sm text-sm leading-6" style={{ color: "var(--muted)" }}>
+                        Try removing “Permit required” or choose another state.
                       </p>
                       <button
                         type="button"
                         onClick={clearFilters}
-                        className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
+                        className="mt-5 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
                         style={{ background: "var(--ink)" }}
                       >
-                        Clear all filters
+                        Clear filters
                       </button>
                     </div>
                   )}
@@ -563,22 +689,143 @@ function ExploreContent() {
                     );
                   })}
 
-                  {!activityFilter && parks.length < total && (
+                  {!activityFilter && !siteTypeFilter && !feeFilter && !noEntryFee && parks.length < total && (
                     <button
                       onClick={loadMore}
                       disabled={loadingMore}
-                      className="rounded-full py-3.5 text-sm font-semibold transition-all hover:-translate-y-0.5 disabled:opacity-40 md:col-span-2 xl:col-span-3 2xl:col-span-4"
+                      className="rounded-lg py-3.5 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-40 md:col-span-2 xl:col-span-3"
                       style={{ background: "var(--ink)", color: "white" }}
                     >
-                      {loadingMore ? "Loading..." : `Load more parks`}
+                      {loadingMore ? "Loading more parks..." : `Load more parks`}
                     </button>
                   )}
                 </div>
               )}
             </div>
+
+            {compareList.length > 0 && (
+              <div className="sticky bottom-0 z-30 border-t bg-white/95 px-4 py-3 backdrop-blur" style={{ borderColor: "var(--line)" }}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Compare {compareList.length} parks</p>
+                    <p className="mt-1 truncate text-xs" style={{ color: "var(--muted)" }}>
+                      {compareList.map((park) => park.name).join(" · ")}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Link href="/compare" className="rounded-lg px-4 py-2 text-sm font-semibold text-white" style={{ background: "var(--ink)" }}>
+                      Compare
+                    </Link>
+                    <button type="button" onClick={clearCompare} className="rounded-lg border px-4 py-2 text-sm font-semibold" style={{ borderColor: "var(--line)", color: "var(--ink)" }}>
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function FilterGroup({
+  title, options, value, onChange,
+}: {
+  title: string;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="mt-4 border-t pt-3.5" style={{ borderColor: "var(--line)" }}>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+        {title}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((option) => {
+          const active = value === option;
+          return (
+            <button
+              type="button"
+              key={option}
+              onClick={() => onChange(active ? "" : option)}
+              className="min-h-9 rounded-lg border px-3 text-left text-xs font-semibold transition hover:bg-white"
+              style={{
+                background: active ? "var(--accent)" : "rgba(255,255,255,0.58)",
+                borderColor: active ? "var(--accent)" : "var(--line)",
+                color: active ? "white" : "var(--muted-strong)",
+              }}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TripNeedsFilter({
+  values, onToggle,
+}: {
+  values: string[];
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <div className="mt-4 border-t pt-3.5" style={{ borderColor: "var(--line)" }}>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+        Trip needs
+      </p>
+      <div className="grid gap-1">
+        {TRIP_NEEDS.map((need) => {
+          const active = values.includes(need);
+          return (
+            <button
+              type="button"
+              key={need}
+              onClick={() => onToggle(need)}
+              className="flex min-h-8 items-center gap-2 rounded-lg px-2 text-left text-xs font-semibold transition hover:bg-white"
+              style={{ color: active ? "var(--accent)" : "var(--muted-strong)" }}
+            >
+              <span
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]"
+                style={{
+                  background: active ? "var(--accent)" : "white",
+                  borderColor: active ? "var(--accent)" : "var(--line)",
+                  color: "white",
+                }}
+                aria-hidden="true"
+              >
+                {active ? "✓" : ""}
+              </span>
+              {need}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MetaBadge({
+  label, value, tone,
+}: {
+  label: string;
+  value: string;
+  tone: "green" | "sand" | "blue";
+}) {
+  const styles = {
+    green: { background: "var(--accent-soft)", color: "var(--accent)" },
+    sand: { background: "var(--sand)", color: "var(--ink)" },
+    blue: { background: "rgba(220,233,243,0.68)", color: "var(--muted-strong)" },
+  }[tone];
+
+  return (
+    <div className="min-w-0 rounded-lg px-2.5 py-2" style={styles}>
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] opacity-70">{label}</p>
+      <p className="mt-0.5 min-w-0 break-words text-xs font-semibold leading-snug sm:truncate">{value}</p>
     </div>
   );
 }
@@ -593,10 +840,13 @@ function ParkListCard({
 }) {
   const { toggleFavorite, isFavorite, getVisitStatus, setVisitStatus, toggleCompare, inCompare } = useParkData();
   const image = park.images?.[0];
-  const fee = park.entranceFees?.[0];
+  const feeCost = getEntranceCost(park);
   const fav = isFavorite(park.parkCode);
   const status = getVisitStatus(park.parkCode);
   const comparing = inCompare(park.parkCode);
+  const bestSeason = getBestSeason(park);
+  const planningNotes = getPlanningNotes(park);
+  const topActivity = park.activities?.[0]?.name ?? "Check activities";
 
   const handleFav = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -615,19 +865,19 @@ function ParkListCard({
   };
 
   return (
-    <article onMouseEnter={onHover}>
+    <article className="min-w-0" onMouseEnter={onHover}>
       <div
-        className="group relative overflow-hidden rounded-xl border p-2.5 transition-all duration-300 hover:-translate-y-1"
+        className="group relative min-w-0 overflow-hidden rounded-lg border p-2 transition-all duration-300 hover:-translate-y-0.5 sm:p-2.5"
         style={{
           background: selected ? "rgba(229,242,239,0.92)" : "rgba(255,255,255,0.74)",
           borderColor: selected ? "rgba(23,109,101,0.28)" : "var(--line)",
-          boxShadow: selected ? "0 18px 48px rgba(23,109,101,0.13)" : "0 10px 34px rgba(17,19,21,0.06)",
+          boxShadow: selected ? "0 14px 34px rgba(23,109,101,0.12)" : "0 8px 24px rgba(17,19,21,0.05)",
         }}
       >
         {/* Full-card link — action buttons sit above via z-index */}
-        <Link href={`/parks/${park.parkCode}`} className="absolute inset-0 z-0 rounded-xl" aria-label={`View ${park.fullName}`} />
+        <Link href={`/parks/${park.parkCode}`} className="absolute inset-0 z-0 rounded-lg" aria-label={`View ${park.fullName}`} />
 
-        <div className="relative h-44 overflow-hidden rounded-[1.25rem]" style={{ background: "var(--surface-soft)" }}>
+        <div className="relative h-40 min-w-0 overflow-hidden rounded-lg" style={{ background: "var(--surface-soft)" }}>
           {image ? (
             <Image
               src={image.url}
@@ -645,10 +895,10 @@ function ParkListCard({
             </div>
           )}
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.1)_48%,rgba(0,0,0,0.52)_100%)]" />
-          <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
-            <div className="flex flex-col items-start gap-1.5">
+          <div className="absolute left-2.5 right-2.5 top-2.5 flex min-w-0 items-start justify-between gap-2 sm:left-3 sm:right-3 sm:top-3">
+            <div className="flex min-w-0 flex-col items-start gap-1.5">
               {park.designation && (
-                <span className="rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm leading-tight">
+                <span className="max-w-[12rem] truncate rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold leading-tight text-white/90 backdrop-blur-sm">
                   {park.designation}
                 </span>
               )}
@@ -658,7 +908,7 @@ function ParkListCard({
                 </span>
               )}
             </div>
-            <span className="rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm leading-tight">
+            <span className="shrink-0 rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold leading-tight text-white/90 backdrop-blur-sm">
               {park.states}
             </span>
           </div>
@@ -675,31 +925,36 @@ function ParkListCard({
           </button>
         </div>
 
-        <div className="px-2 pb-2 pt-4">
+        <div className="min-w-0 px-2 pb-2 pt-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="line-clamp-2 text-lg font-semibold leading-tight" style={{ color: "var(--ink)" }}>
+              <p className="line-clamp-2 text-base font-semibold leading-tight" style={{ color: "var(--ink)" }}>
                 {park.fullName}
+              </p>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>
+                {park.states} · {park.designation || "NPS site"}
               </p>
               <p className="mt-2 line-clamp-2 text-sm leading-6" style={{ color: "var(--muted)" }}>{park.description}</p>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {fee && (
-              <span className="rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-                {parseFloat(fee.cost) === 0 ? "Free entry" : `$${fee.cost} entry`}
-              </span>
-            )}
-            {park.activities?.slice(0, 2).map((activity) => (
-              <span key={activity.id} className="rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "rgba(17,19,21,0.05)", color: "var(--muted)" }}>
-                {activity.name}
-              </span>
+          <div className="mt-3 grid min-w-0 grid-cols-2 gap-1.5 min-[430px]:grid-cols-3">
+            <MetaBadge label="Entry" value={feeCost === null ? "Check" : feeCost === 0 ? "Free" : `$${feeCost}`} tone="green" />
+            <MetaBadge label="Best" value={bestSeason} tone="sand" />
+            <MetaBadge label="Top" value={topActivity} tone="blue" />
+          </div>
+
+          <div className="mt-3 grid gap-1.5">
+            {planningNotes.map((note) => (
+              <div key={note} className="flex min-w-0 items-start gap-2 rounded-lg border bg-white/70 px-2.5 py-2 text-xs font-semibold leading-5" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
+                <span className="min-w-0 break-words">{note}</span>
+              </div>
             ))}
           </div>
 
-          <div className="relative z-10 mt-4 flex items-center justify-between gap-3 border-t pt-3" style={{ borderColor: "var(--line)" }}>
-            <div className="flex items-center gap-2">
+          <div className="relative z-10 mt-3 flex min-w-0 flex-col gap-2 border-t pt-3 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between" style={{ borderColor: "var(--line)" }}>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={handleStatus}
@@ -723,7 +978,7 @@ function ParkListCard({
                 type="button"
                 onClick={handleCompare}
                 data-tip={comparing ? "Remove from compare" : "Compare parks"}
-                className="icon-btn-tooltip flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:scale-105 active:scale-95"
+                className="icon-btn-tooltip flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all hover:scale-105 active:scale-95"
                 style={{
                   background: comparing ? "rgba(169,111,45,0.12)" : "rgba(17,19,21,0.05)",
                   color: comparing ? "var(--amber)" : "var(--muted)",
@@ -733,11 +988,17 @@ function ParkListCard({
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
                 </svg>
+                Compare
               </button>
             </div>
-            <span className="text-sm font-semibold transition-all group-hover:translate-x-0.5" style={{ color: "var(--ink)" }}>
-              Details →
-            </span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Link href="/planner" className="rounded-lg border px-3 py-2 text-xs font-semibold" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
+                Add to trip
+              </Link>
+              <span className="rounded-lg px-3 py-2 text-xs font-semibold transition-all group-hover:translate-x-0.5" style={{ background: "var(--ink)", color: "white" }}>
+                Details
+              </span>
+            </div>
           </div>
         </div>
       </div>

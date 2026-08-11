@@ -7,37 +7,11 @@ import { HeroSearchAndStats } from "./HomeActions";
 import NearbySection from "./NearbySection";
 import UserCollection from "./UserCollection";
 
-const HERO_PREVIEW_STOPS = [
-  { time: "Day 1", title: "Pick the anchor park", detail: "Shortlist views, trails, and overnight options" },
-  { time: "Day 2", title: "Shape the route", detail: "Compare drive time, weather, and park fit" },
-  { time: "Day 3", title: "Save the memory", detail: "Keep notes, photos, and visit status together" },
-];
-
-const JOURNEY_STEPS = [
-  {
-    href: "/explore",
-    eyebrow: "Discover",
-    title: "Find the place that fits the moment.",
-    desc: "Search parks by name, activity, state, or distance, then move from curiosity to a clear shortlist.",
-  },
-  {
-    href: "/planner",
-    eyebrow: "Plan",
-    title: "Shape the route without clutter.",
-    desc: "Build a multi-stop trip, keep notes close, and generate a packing list that adapts to the season.",
-  },
-  {
-    href: "/journal",
-    eyebrow: "Remember",
-    title: "Keep every trail in one quiet archive.",
-    desc: "Save photos, ratings, and field notes so the trip still has a place after you return.",
-  },
-];
-
-const DESIGN_NOTES = [
-  "Search by park, state, activity, or mood.",
-  "Save candidates without leaving the flow.",
-  "Turn the shortlist into a calm itinerary.",
+const READINESS_ITEMS = [
+  { label: "Pick trail difficulty", done: true },
+  { label: "Check road or permit alerts", done: true },
+  { label: "Save backup trail", done: false },
+  { label: "Add sunrise or parking note", done: false },
 ];
 
 const ACTIVITY_DISCOVERY = [
@@ -46,21 +20,53 @@ const ACTIVITY_DISCOVERY = [
   { label: "Wildlife", q: "wildlife" },
   { label: "Climbing", q: "climbing" },
   { label: "Kayaking", q: "kayaking" },
-  { label: "Fishing", q: "fishing" },
-  { label: "Cycling", q: "cycling" },
-  { label: "Swimming", q: "swimming" },
+  { label: "Scenic drives", q: "scenic driving" },
+];
+
+const BUILDER_STATUS_ITEMS = [
+  "Entry fee checked",
+  "Parking note added",
+  "Backup route selected",
+  "Shuttle timing reviewed",
+];
+
+const DRAFT_PREVIEW_DAYS = [
+  {
+    day: "Day 1",
+    label: "Arrival",
+    items: [
+      { text: "Valley Loop", note: "Easy · 1.5 hr", tags: ["Easy", "1.5 hr"] },
+      { text: "Tunnel View sunset", note: "Parking fills early", tags: ["Parking"] },
+    ],
+  },
+  {
+    day: "Day 2",
+    label: "Main hike",
+    items: [
+      { text: "Mist Trail", note: "Moderate/Hard · start before 8 AM", tags: ["Hard", "before 8 AM"] },
+      { text: "Lower Yosemite Fall if wet", note: "Rainy-day backup", tags: ["Backup"] },
+    ],
+  },
+  {
+    day: "Day 3",
+    label: "Short route",
+    items: [
+      { text: "Easy overlook before leaving", note: "Low effort, good payoff", tags: ["Easy"] },
+      { text: "Save notes to journal", note: "Keep parking and trail notes", tags: ["Journal"] },
+    ],
+  },
 ];
 
 const ICONIC_PARK_CODES = [
-  "yose",  // Yosemite
-  "grca",  // Grand Canyon
-  "yell",  // Yellowstone
-  "zion",  // Zion
-  "grsm",  // Great Smoky Mountains
-  "glac",  // Glacier
-  "romo",  // Rocky Mountain
-  "acad",  // Acadia
-  "olym",  // Olympic
+  "yose",
+  "grca",
+  "yell",
+  "zion",
+  "grsm",
+  "glac",
+  "romo",
+  "acad",
+  "olym",
 ];
 
 async function getFeaturedParks(): Promise<{ parks: Park[]; total: number }> {
@@ -79,230 +85,337 @@ async function getFeaturedParks(): Promise<{ parks: Park[]; total: number }> {
   }
 }
 
+function formatFee(park?: Park) {
+  const fee = park?.entranceFees?.[0];
+  if (!fee) return "Check fee";
+  const cost = parseFloat(fee.cost);
+  return cost === 0 ? "Free entry" : `$${cost.toFixed(0)} entry`;
+}
+
+function activitySummary(park?: Park) {
+  const activities = park?.activities?.slice(0, 3).map((activity) => activity.name);
+  return activities?.length ? activities.join(" / ") : "Trails / overlooks / visitor center";
+}
+
 export default async function HomePage() {
   const { parks: featured } = await getFeaturedParks();
-  const featureImage = featured[1]?.images?.[0] ?? featured[0]?.images?.[0];
+  const featuredPark = featured.find((park) => park.parkCode === "yose") ?? featured[0];
 
   return (
     <main className="min-h-screen overflow-hidden" style={{ background: "var(--surface)" }}>
-      <section className="relative min-h-[55svh] overflow-hidden text-white sm:min-h-[100svh]">
-        <Image
-          src="/hero.jpg"
-          alt="Grand Prismatic Spring, Yellowstone National Park"
-          fill
-          className="object-cover object-center"
-          sizes="100vw"
-          priority
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.68)_0%,rgba(0,0,0,0.36)_44%,rgba(0,0,0,0.18)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.16)_46%,rgba(0,0,0,0.78)_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_16%,rgba(255,255,255,0.24),transparent_24rem)]" />
+      <section className="relative overflow-hidden border-b pt-[var(--nav-h)]" style={{ borderColor: "var(--line)" }}>
+        <div className="absolute inset-0">
+          <Image
+            src="/hero.jpg"
+            alt="Mountain valley landscape"
+            fill
+            className="object-cover"
+            sizes="100vw"
+            priority
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,13,13,0.86)_0%,rgba(10,13,13,0.66)_45%,rgba(10,13,13,0.24)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,13,13,0.22)_0%,rgba(10,13,13,0.54)_100%)]" />
+        </div>
 
-        <div className="premium-shell relative z-10 grid items-center gap-12 pt-20 pb-14 sm:min-h-[100svh] sm:pt-28 sm:pb-24 lg:grid-cols-[minmax(0,1fr)_390px]">
-          <div className="min-w-0 w-full max-w-5xl text-center lg:text-left">
-            <div className="animate-hero-1 mb-6 hidden sm:inline-flex items-center gap-3 rounded-lg border border-white/16 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/74 backdrop-blur-xl">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#8ee3d5]" />
-              National park trip planning
+        <div className="premium-shell relative z-10 grid min-h-[calc(100svh-var(--nav-h))] items-center gap-10 py-12 text-white lg:grid-cols-[minmax(0,0.98fr)_380px] lg:py-16">
+          <div className="min-w-0 w-full max-w-2xl">
+            <div className="mb-5 flex flex-wrap gap-2">
+              <span className="rounded-md border border-white/18 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/72">
+                Featured park plan
+              </span>
             </div>
 
-            <h1
-              className="animate-hero-2 text-balance font-semibold leading-[1.05] sm:leading-[0.92]"
-              style={{ fontSize: "clamp(1.75rem, 7.5vw, 8.75rem)", overflowWrap: "break-word" }}
-            >
-              Plan the park trip without the chaos.
+            <h1 className="max-w-2xl text-balance text-4xl font-semibold leading-[1.02] sm:text-5xl lg:text-6xl">
+              Pick a park. Build the day. Keep the notes.
             </h1>
 
-            <p className="animate-hero-3 mx-auto mt-8 max-w-2xl text-balance text-lg leading-8 text-white/74 sm:text-xl lg:mx-0">
-              Move from search to route, packing, and memory keeping with a planning surface that stays quiet.
+            <p className="mt-5 max-w-xl text-base leading-7 text-white/74">
+              TrailQuest helps you compare parks, check trip basics, and save the plan before another tab takes over.
             </p>
 
             <HeroSearchAndStats />
           </div>
 
-          <aside className="animate-hero-4 hidden lg:block">
-            <div
-              className="rounded-xl border p-4 backdrop-blur-2xl"
-              style={{ background: "rgba(255,255,255,0.14)", borderColor: "rgba(255,255,255,0.2)", boxShadow: "0 30px 90px rgba(0,0,0,0.22)" }}
-            >
-              <div className="rounded-lg bg-white p-5 text-[var(--ink)]">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
-                      Suggested plan
-                    </p>
-                    <h2 className="mt-3 text-2xl font-semibold leading-tight">
-                      Long weekend route
-                    </h2>
-                  </div>
-                  <span className="rounded-lg px-3 py-1 text-xs font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-                    3 days
-                  </span>
-                </div>
-
-                <div className="mt-6 space-y-3">
-                  {HERO_PREVIEW_STOPS.map((stop, index) => (
-                    <div key={stop.time} className="flex gap-3 rounded-lg p-3" style={{ background: index === 0 ? "var(--surface-soft)" : "transparent" }}>
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold" style={{ background: "var(--ink)", color: "white" }}>
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>{stop.time}</p>
-                        <p className="mt-0.5 text-sm font-semibold">{stop.title}</p>
-                        <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>{stop.detail}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <Link
-                  href="/planner"
-                  className="mt-5 flex min-h-11 items-center justify-center rounded-lg text-sm font-semibold transition-all hover:opacity-85"
-                  style={{ background: "var(--ink)", color: "white" }}
-                >
-                  Open planner
-                </Link>
-              </div>
-            </div>
-          </aside>
-
-        </div>
-      </section>
-
-      <section className="premium-shell py-24 sm:py-32">
-        <AnimatedSection direction="up">
-        <div className="grid items-end gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-          <div>
-            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-              From idea to itinerary
-            </p>
-            <h2
-              className="text-balance font-semibold leading-[1.02]"
-              style={{ color: "var(--ink)", fontSize: "clamp(2.7rem, 7vw, 6.5rem)" }}
-            >
-              Less interface. More anticipation.
-            </h2>
-          </div>
-          <div className="lg:pb-3">
-            <p className="max-w-2xl text-lg leading-8" style={{ color: "var(--muted)" }}>
-              The homepage should feel like opening a travel film, not a dashboard. Search stays immediate, planning stays nearby, and the visual weight belongs to the places.
-            </p>
-          </div>
-        </div>
-        </AnimatedSection>
-
-        <div className="mt-16 overflow-hidden rounded-xl border" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.58)", boxShadow: "var(--shadow-card)" }}>
-          {JOURNEY_STEPS.map(({ href, eyebrow, title, desc }, index) => (
-            <AnimatedSection key={href} direction="left" delay={index * 100}>
-            <Link
-              href={href}
-              className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/70 sm:px-8 sm:py-5 lg:grid lg:grid-cols-[120px_1fr_260px_40px] lg:items-center lg:gap-5 lg:py-8"
-              style={{ borderTop: index === 0 ? "none" : "1px solid var(--line)" }}
-            >
-              {/* On mobile: wraps eyebrow+title as one flex column. On lg: contents dissolves into grid. */}
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5 lg:contents">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
-                  {eyebrow}
+          <aside className="rounded-lg border border-white/14 bg-[#fbfbf8]/88 p-3.5 text-[var(--ink)] shadow-[0_18px_50px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
+                  Today&apos;s planning board
                 </p>
-                <h3 className="text-base font-semibold leading-tight sm:text-xl lg:text-2xl" style={{ color: "var(--ink)" }}>
-                  {title}
-                </h3>
+                <h2 className="mt-1.5 text-xl font-semibold leading-tight">
+                  {featuredPark?.fullName ?? "Yosemite National Park"}
+                </h2>
               </div>
-              <p className="hidden text-sm leading-7 lg:block" style={{ color: "var(--muted)" }}>
-                {desc}
-              </p>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all group-hover:translate-x-1 lg:h-10 lg:w-10" style={{ background: "var(--ink)", color: "white" }}>
-                →
+              <span className="rounded-md px-2 py-1 text-xs font-semibold" style={{ background: "rgba(23,109,101,0.1)", color: "var(--accent)" }}>
+                Saved
               </span>
-            </Link>
-            </AnimatedSection>
-          ))}
-        </div>
-
-        <div className="mt-10 grid gap-3 md:grid-cols-3">
-          {DESIGN_NOTES.map((note) => (
-            <div key={note} className="rounded-lg border px-5 py-3 text-sm font-medium" style={{ borderColor: "var(--line)", color: "var(--muted)", background: "rgba(255,255,255,0.5)" }}>
-              {note}
             </div>
-          ))}
+
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <InfoTile label="Best for" value={activitySummary(featuredPark)} />
+              <InfoTile label="Need to check" value="permits / road status" />
+              <InfoTile label="Entry" value={formatFee(featuredPark)} />
+              <InfoTile label="Backup" value="shorter trail if weather turns" />
+            </div>
+
+            <div className="mt-4 rounded-lg border p-3" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.72)" }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--muted)" }}>
+                Readiness checklist
+              </p>
+              <div className="mt-2.5 grid gap-2">
+                {READINESS_ITEMS.map((item) => (
+                  <div key={item.label} className="flex items-center gap-2 text-sm">
+                    <span
+                      className="flex h-4 w-4 items-center justify-center rounded border text-[10px]"
+                      style={{
+                        borderColor: item.done ? "var(--accent)" : "rgba(17,19,21,0.18)",
+                        background: item.done ? "var(--accent)" : "transparent",
+                        color: item.done ? "white" : "transparent",
+                      }}
+                    >
+                      ✓
+                    </span>
+                    <span style={{ color: item.done ? "var(--ink)" : "var(--muted)" }}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Link
+              href="/planner"
+              className="mt-4 flex min-h-10 items-center justify-center rounded-lg text-sm font-semibold transition hover:opacity-90"
+              style={{ background: "var(--ink)", color: "white" }}
+            >
+              Continue this plan
+            </Link>
+          </aside>
         </div>
       </section>
 
-      <section className="premium-shell pb-24 sm:pb-32">
-        <div className="grid items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="premium-shell py-20 sm:py-24">
+        <div className="grid gap-7 lg:grid-cols-[0.46fr_1fr] lg:items-start">
+          <AnimatedSection direction="up">
+            <div className="max-w-md">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                AI itinerary builder
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold leading-tight sm:text-4xl" style={{ color: "var(--ink)" }}>
+                Tell TrailQuest what kind of trip you want.
+              </h2>
+              <p className="mt-4 text-sm leading-7" style={{ color: "var(--muted)" }}>
+                Start with a park, pace, and a few limits. TrailQuest turns that into a draft you can edit.
+              </p>
+              <Link
+                href="/planner"
+                className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg px-5 text-sm font-semibold transition hover:opacity-90"
+                style={{ background: "var(--ink)", color: "white" }}
+              >
+                Build my itinerary
+              </Link>
+            </div>
+          </AnimatedSection>
+
+          <div className="min-w-0 overflow-hidden rounded-lg border bg-white p-4 sm:p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-card)" }}>
+            <AnimatedSection direction="up">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--accent)" }}>
+                    Conversation
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
+                    A few plain details are enough to start a draft.
+                  </p>
+                </div>
+                <span className="rounded-md px-2.5 py-1 text-xs font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+                  drafting
+                </span>
+              </div>
+            </AnimatedSection>
+
+            <div className="mt-4 grid gap-3">
+              <AnimatedSection direction="up" delay={80}>
+                <div className="max-w-[86%] rounded-lg border bg-[var(--surface)] p-3" style={{ borderColor: "var(--line)" }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>
+                    You
+                  </p>
+                  <p className="mt-2 text-sm leading-6" style={{ color: "var(--ink)" }}>
+                    Plan 3 days in Yosemite. Moderate pace. Avoid hard trails.
+                  </p>
+                </div>
+              </AnimatedSection>
+
+              <AnimatedSection direction="up" delay={180}>
+                <div className="ml-auto max-w-[88%] rounded-lg p-3" style={{ background: "var(--ink)", color: "white" }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/56">
+                    TrailQuest
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-white/84">
+                    Got it. I&apos;ll keep hikes under 5 miles, add parking notes, and include a rainy-day backup.
+                  </p>
+                </div>
+              </AnimatedSection>
+
+              <AnimatedSection direction="up" delay={280}>
+                <div className="rounded-lg border bg-[var(--surface)] p-3" style={{ borderColor: "var(--line)" }}>
+                  <div className="flex items-center gap-2 text-sm" style={{ color: "var(--muted)" }}>
+                    <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />
+                    TrailQuest is checking fees, shuttle notes, trail difficulty, and backup options...
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {BUILDER_STATUS_ITEMS.map((item) => (
+                      <div key={item} className="flex items-center gap-2 text-sm" style={{ color: "var(--muted-strong)" }}>
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]" style={{ borderColor: "var(--accent)", background: "var(--accent)", color: "white" }}>
+                          ✓
+                        </span>
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </AnimatedSection>
+
+              <AnimatedSection direction="up" delay={380}>
+                <div className="rounded-lg border bg-white p-3.5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--accent)" }}>
+                        Draft itinerary
+                      </p>
+                      <h3 className="mt-1 text-lg font-semibold" style={{ color: "var(--ink)" }}>
+                        Yosemite long weekend
+                      </h3>
+                    </div>
+                    <span className="rounded-md px-2.5 py-1 text-xs font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+                      editable draft
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                    {DRAFT_PREVIEW_DAYS.map((day, index) => (
+                      <AnimatedSection key={day.day} direction="up" delay={460 + index * 80}>
+                        <div className="rounded-lg border p-3" style={{ borderColor: "var(--line)", background: "var(--surface)" }}>
+                        <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                          {day.day} · {day.label}
+                        </p>
+                        <div className="mt-3 grid gap-3">
+                          {day.items.map((item) => (
+                            <div key={item.text}>
+                              <p className="text-sm font-medium" style={{ color: "var(--muted-strong)" }}>
+                                {item.text}
+                              </p>
+                              <p className="mt-0.5 text-xs leading-5" style={{ color: "var(--muted)" }}>
+                                {item.note}
+                              </p>
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {item.tags.map((tag) => (
+                                  <span key={tag} className="rounded px-2 py-1 text-[11px] font-semibold" style={{ background: "white", color: tag === "Hard" ? "#9a4b1f" : "var(--accent)", border: "1px solid var(--line)" }}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        </div>
+                      </AnimatedSection>
+                    ))}
+                  </div>
+                </div>
+              </AnimatedSection>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="premium-shell pb-20 sm:pb-24">
+        <div className="grid items-start gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <AnimatedSection direction="left">
-          <div className="relative min-h-[520px] overflow-hidden rounded-xl" style={{ background: "var(--surface-soft)", boxShadow: "var(--shadow-card)" }}>
-            {featureImage && (
-              <Image
-                src={featureImage.url}
-                alt={featureImage.altText}
-                fill
-                className="object-cover"
-                sizes="(min-width: 1024px) 55vw, 100vw"
-              />
-            )}
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.62)_100%)]" />
-            <div className="absolute bottom-0 left-0 right-0 p-8 text-white sm:p-10">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/60">Quiet utility</p>
-              <h2 className="max-w-2xl text-4xl font-semibold leading-none sm:text-6xl">
-                Every detail has room to breathe.
+            <div className="rounded-lg border bg-white p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                Start with a constraint
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold leading-tight" style={{ color: "var(--ink)" }}>
+                Filter by the day you actually have.
+              </h2>
+              <p className="mt-4 text-sm leading-6" style={{ color: "var(--muted)" }}>
+                Choose an activity, then compare parks with the details that change the plan: drive time, entry cost, weather, permits, and trail difficulty.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {ACTIVITY_DISCOVERY.map(({ label, q }) => (
+                  <Link
+                    key={q}
+                    href={`/explore?q=${q}`}
+                    className="rounded-lg border px-3 py-2 text-sm font-semibold transition hover:bg-[var(--surface-soft)]"
+                    style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </AnimatedSection>
+
+          <AnimatedSection direction="right">
+            <div className="rounded-lg border bg-white p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                    Itinerary draft
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold" style={{ color: "var(--ink)" }}>
+                    Yosemite long weekend
+                  </h2>
+                </div>
+                <span className="rounded-md px-2.5 py-1 text-xs font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+                  2 nights
+                </span>
+              </div>
+              {["Arrive before lunch, check shuttle status", "Mist Trail if dry; Valley Loop if crowded", "Glacier Point road note and sunrise backup"].map((item, index) => (
+                <div key={item} className="grid grid-cols-[56px_1fr] gap-3 border-t py-3 text-sm" style={{ borderColor: "var(--line)" }}>
+                  <span className="font-semibold" style={{ color: "var(--accent)" }}>Day {index + 1}</span>
+                  <span style={{ color: "var(--muted)" }}>{item}</span>
+                </div>
+              ))}
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      <AnimatedSection direction="up">
+        <NearbySection />
+      </AnimatedSection>
+      <AnimatedSection direction="up">
+        <UserCollection />
+      </AnimatedSection>
+
+      <AnimatedSection direction="up">
+        <section className="premium-shell pb-24 sm:pb-28">
+          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                Featured parks
+              </p>
+              <h2 className="text-3xl font-semibold sm:text-5xl" style={{ color: "var(--ink)" }}>
+                Compare the next stop.
               </h2>
             </div>
+            <Link href="/explore" className="text-sm font-semibold underline-offset-4 transition hover:underline" style={{ color: "var(--ink)" }}>
+              Browse all parks
+            </Link>
           </div>
-          </AnimatedSection>
-          <AnimatedSection direction="right">
-          <div className="lg:pl-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-              Start with what you want to do
-            </p>
-            <h2 className="mt-5 text-5xl font-semibold leading-[1.02]" style={{ color: "var(--ink)" }}>
-              Browse by activity, then refine.
-            </h2>
-            <p className="mt-6 text-base leading-8" style={{ color: "var(--muted)" }}>
-              Begin with the kind of day you want. The interface stays calm while the park data does the heavy lifting.
-            </p>
-            <AnimatedSection direction="up" delay={100} className="mt-8 flex flex-wrap gap-2.5">
-              {ACTIVITY_DISCOVERY.map(({ label, q }) => (
-                <Link
-                  key={q}
-                  href={`/explore?q=${q}`}
-                  className="rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:bg-white"
-                  style={{ borderColor: "var(--line)", color: "var(--ink)", background: "rgba(255,255,255,0.56)" }}
-                >
-                  {label}
-                </Link>
-              ))}
-            </AnimatedSection>
-          </div>
-          </AnimatedSection>
-        </div>
-      </section>
 
-      <AnimatedSection direction="up">
-      <NearbySection />
-      </AnimatedSection>
-      <AnimatedSection direction="up">
-      <UserCollection />
-      </AnimatedSection>
-
-      <AnimatedSection direction="up">
-      <section className="premium-shell pb-28 sm:pb-36">
-        <div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-              Featured destinations
-            </p>
-            <h2 className="text-4xl font-semibold sm:text-6xl" style={{ color: "var(--ink)" }}>
-              Swipe through the views.
-            </h2>
-          </div>
-          <Link href="/explore" className="text-sm font-semibold underline-offset-4 transition hover:underline" style={{ color: "var(--ink)" }}>
-            Explore all parks
-          </Link>
-        </div>
-
-        <FeaturedImageSwipe parks={featured} />
-      </section>
+          <FeaturedImageSwipe parks={featured} />
+        </section>
       </AnimatedSection>
     </main>
+  );
+}
+
+function InfoTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border p-2.5" style={{ borderColor: "rgba(17,19,21,0.07)", background: "rgba(255,255,255,0.66)" }}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>{label}</p>
+      <p className="mt-1 text-[13px] font-semibold leading-5" style={{ color: "var(--ink)" }}>{value}</p>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, useSyncExternalStore, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import BrandLogo from "./BrandLogo";
 
 const ONBOARD_KEY = "trailquest_onboarded";
 const ONBOARD_EVENT = "trailquest-onboarded";
@@ -172,14 +173,7 @@ export default function OnboardingModal() {
           >
             ✕
           </button>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #2d5a3d, #4a7c59)" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M2 21L8 8l4.5 8L16 10l6 11H2z"/></svg>
-            </div>
-            <span className="font-bold text-white text-base" style={{ fontFamily: "var(--font-playfair)" }}>
-              Trail<span style={{ color: "#c8860a" }}>Quest</span>
-            </span>
-          </div>
+          <BrandLogo className="mb-3" textColor="white" />
           <h2 id="onboarding-title" className="font-bold text-white text-2xl leading-tight" style={{ fontFamily: "var(--font-playfair)" }}>
             {step === 0 ? "Welcome to TrailQuest" : step === 1 ? "Parks you'll love" : "Ready to explore?"}
           </h2>

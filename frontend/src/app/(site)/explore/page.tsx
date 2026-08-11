@@ -520,7 +520,7 @@ function ExploreContent() {
                 <button
                   type="button"
                   onClick={() => setNpOnly((value) => !value)}
-                  className="flex min-h-16 items-center justify-between rounded-full border px-7 text-left text-base font-medium"
+                  className="flex min-h-14 items-center justify-between rounded-full border px-7 text-left text-base font-medium"
                   style={{
                     background: npOnly ? "rgba(169,111,45,0.12)" : "white",
                     borderColor: npOnly ? "rgba(169,111,45,0.32)" : "var(--line)",

@@ -468,7 +468,7 @@ function ExploreContent() {
               aria-label="Close filters"
             />
             <div
-              className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-[1.75rem] border px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-6 shadow-2xl"
+              className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-[1.75rem] border px-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-6 shadow-2xl"
               style={{ background: "var(--surface)", borderColor: "rgba(255,255,255,0.82)" }}
             >
               <div className="mb-4 flex items-center justify-between gap-4">
@@ -493,7 +493,7 @@ function ExploreContent() {
                   <select
                     value={stateCode}
                     onChange={(e) => setStateCode(e.target.value)}
-                    className="min-h-14 rounded-lg border px-4 text-lg font-semibold"
+                    className="min-h-16 w-full rounded-lg border px-5 text-base font-medium"
                     style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
                     {US_STATES.map(([code, name]) => (
@@ -507,7 +507,7 @@ function ExploreContent() {
                   <select
                     value={activityFilter}
                     onChange={(e) => setActivityFilter(e.target.value)}
-                    className="min-h-14 rounded-lg border px-4 text-lg font-semibold"
+                    className="min-h-16 w-full rounded-lg border px-5 text-base font-medium"
                     style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
                     <option value="">All activities</option>

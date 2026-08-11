@@ -12,13 +12,26 @@ interface JournalEntry { id: string; title: string; date: string; parkName: stri
 interface Trip { id: string; name: string; startDate: string; stops: { parkName: string }[]; }
 interface ParkRating { park_code: string; stars: number; }
 
+const STARTER_PARKS = [
+  { name: "Yosemite National Park", note: "Waterfalls, valley walks, parking fills early." },
+  { name: "Acadia National Park", note: "Coast trails, sunrise drive, timed entry checks." },
+  { name: "Zion National Park", note: "Shuttle timing, canyon hikes, permit notes." },
+];
+
 function initials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
+function formatDate(value: string): string {
+  if (!value) return "Dates not set";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+}
+
 function Stars({ rating }: { rating: number }) {
   return (
-    <span className="text-xs" style={{ color: "#c8860a" }}>
+    <span className="text-xs" style={{ color: "#a96f2d" }}>
       {"★".repeat(rating)}{"☆".repeat(5 - rating)}
     </span>
   );
@@ -75,67 +88,99 @@ export default function ProfilePage() {
 
   const wantCount = Object.values(visitStatus).filter((v) => v === "want").length;
   const beenCount = Object.values(visitStatus).filter((v) => v === "been").length;
+  const stats = [
+    { num: favorites.length, label: "Saved parks" },
+    { num: wantCount, label: "Want to go" },
+    { num: beenCount, label: "Been here" },
+    { num: entries.length, label: "Journal entries" },
+    { num: trips.length, label: "Trips" },
+  ];
+  const hasAnyActivity = stats.some((item) => item.num > 0);
+  const tabCounts = { saved: favorites.length, journal: entries.length, trips: trips.length };
 
   return (
     <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
-      {/* Header */}
-      <div
-        className="relative overflow-hidden"
-        style={{ background: "linear-gradient(160deg, #071510 0%, #0f2518 55%, #1a3a2a 100%)" }}
-      >
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 60% 50%, rgba(45,90,61,0.28) 0%, transparent 65%)" }} />
-        <div className="max-w-4xl mx-auto px-6 py-12 relative">
-          <div className="flex items-end gap-6">
-            <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shrink-0"
-              style={{ background: "linear-gradient(135deg, #2d5a3d, #4a7c59)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}
-            >
-              {initials(user.name)}
-            </div>
-            <div className="flex-1 pb-1">
-              <h1
-                className="font-bold text-white mb-1 leading-tight"
-                style={{ fontFamily: "var(--font-playfair)", fontSize: "1.8rem" }}
-              >
-                {user.name}
-              </h1>
-              <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>{user.email}</p>
-            </div>
-            <button
-              onClick={() => { signOut(); router.push("/"); }}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-white/10 shrink-0 mb-1"
-              style={{ color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.12)" }}
-            >
-              Sign out
-            </button>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-8">
-            {[
-              { num: favorites.length, label: "Saved Parks" },
-              { num: beenCount, label: "Been Here" },
-              { num: wantCount, label: "Want to Go" },
-              { num: entries.length, label: "Journal Entries" },
-              { num: parkRatings.length, label: "Parks Rated" },
-            ].map(({ num, label }) => (
+      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6">
+        <section
+          className="rounded-lg border bg-white p-4 sm:p-5"
+          style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
               <div
-                key={label}
-                className="p-4 rounded-xl text-center"
-                style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.08)" }}
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg text-xl font-semibold text-white"
+                style={{ background: "linear-gradient(135deg, var(--accent), #4a7c59)" }}
               >
-                <p className="text-2xl font-bold text-white mb-0.5" style={{ fontFamily: "var(--font-playfair)" }}>{num}</p>
-                <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{label}</p>
+                {initials(user.name)}
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                  Account
+                </p>
+                <h1 className="mt-1 truncate text-2xl font-semibold" style={{ color: "var(--ink)" }}>
+                  {user.name}
+                </h1>
+                <p className="mt-1 truncate text-sm" style={{ color: "var(--muted)" }}>{user.email}</p>
+              </div>
+            </div>
 
-      {/* Tab nav */}
-      <div style={{ background: "white", borderBottom: "1px solid rgba(26,58,42,0.08)" }}>
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="flex gap-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-md px-3 py-2 text-xs font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+                Signed in
+              </span>
+              <span className="rounded-md px-3 py-2 text-xs font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+                Synced
+              </span>
+              <span className="rounded-md border bg-white px-3 py-2 text-xs font-semibold" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
+                {parkRatings.length} rated
+              </span>
+              <button
+                onClick={() => { signOut(); router.push("/"); }}
+                className="rounded-lg border bg-white px-3 py-2 text-xs font-semibold transition hover:bg-stone-50"
+                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 border-t pt-4" style={{ borderColor: "var(--line)" }}>
+            {hasAnyActivity ? (
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-5 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
+                {stats.map(({ num, label }) => (
+                  <div
+                    key={label}
+                    className="min-w-[9rem] rounded-lg border bg-[var(--surface)] px-3 py-2.5 sm:min-w-0"
+                    style={{ borderColor: "var(--line)" }}
+                  >
+                    <p className="text-lg font-semibold leading-none" style={{ color: "var(--ink)" }}>{num}</p>
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>{label}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 rounded-lg border bg-[var(--surface)] p-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--line)" }}>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Start tracking your parks</p>
+                  <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>
+                    Save parks, write field notes, or open a trip draft before you leave.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link href="/explore" className="rounded-lg px-3 py-2 text-xs font-semibold text-white" style={{ background: "var(--ink)" }}>
+                    Explore parks
+                  </Link>
+                  <Link href="/planner" className="rounded-lg border bg-white px-3 py-2 text-xs font-semibold" style={{ borderColor: "var(--line)", color: "var(--accent)" }}>
+                    Plan a trip
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <nav className="mt-4 rounded-lg border bg-white p-1" style={{ borderColor: "var(--line)" }} aria-label="Profile sections">
+          <div className="grid grid-cols-3 gap-1">
             {([
               ["saved", "Saved Parks"],
               ["journal", "Journal"],
@@ -144,125 +189,137 @@ export default function ProfilePage() {
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className="py-4 text-sm font-semibold relative transition-colors"
-                style={{ color: tab === key ? "var(--ink)" : "var(--muted)" }}
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-semibold transition"
+                style={{
+                  background: tab === key ? "var(--ink)" : "transparent",
+                  color: tab === key ? "white" : "var(--muted)",
+                }}
               >
-                {label}
-                {tab === key && (
-                  <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full" style={{ background: "#c8860a" }} />
-                )}
+                <span className="truncate">{label}</span>
+                <span
+                  className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                  style={{
+                    background: tab === key ? "rgba(255,255,255,0.16)" : "var(--surface-soft)",
+                    color: tab === key ? "white" : "var(--muted-strong)",
+                  }}
+                >
+                  {tabCounts[key]}
+                </span>
               </button>
             ))}
           </div>
-        </div>
-      </div>
+        </nav>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Saved Parks */}
-        {tab === "saved" && (
-          <>
-            {favorites.length === 0 ? (
-              <EmptyState
-                icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>}
-                title="No saved parks yet"
-                desc="Hit the heart button on any park to save it here."
-                action={{ href: "/explore", label: "Explore Parks" }}
-              />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {favorites.map((park) => (
-                  <FavCard key={park.code} park={park} onRemove={() => toggleFavorite(park)} />
-                ))}
-              </div>
-            )}
-          </>
-        )}
+        <main className="mt-4">
+          {tab === "saved" && (
+            <>
+              {favorites.length === 0 ? (
+                <EmptyState
+                  title="No saved parks yet."
+                  desc="Save parks from Explore to compare fees, seasons, and trip notes later."
+                  primary={{ href: "/explore", label: "Explore parks" }}
+                  secondary={{ href: "/explore?recommended=1", label: "View recommended parks" }}
+                  starters={STARTER_PARKS}
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {favorites.map((park) => (
+                    <FavCard key={park.code} park={park} onRemove={() => toggleFavorite(park)} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
-        {/* Journal */}
-        {tab === "journal" && (
-          <>
-            <div className="flex justify-end mb-5">
-              <Link
-                href="/journal?action=new"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-                style={{ background: "var(--accent)" }}
-              >
-                + New Entry
-              </Link>
-            </div>
-            {entries.length === 0 ? (
-              <EmptyState
-                icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>}
-                title="No journal entries yet"
-                desc="Log your hikes and park visits to build your adventure journal."
-                action={{ href: "/journal", label: "Go to Journal" }}
-              />
-            ) : (
-              <div className="space-y-3">
-                {entries.map((e) => (
-                  <Link
-                    key={e.id}
-                    href={`/journal?id=${e.id}`}
-                    className="flex items-center justify-between p-4 rounded-2xl transition-all hover:-translate-y-0.5"
-                    style={{ background: "white", boxShadow: "var(--shadow-card)", border: "1px solid rgba(26,58,42,0.06)" }}
-                  >
-                    <div>
-                      <p className="font-semibold text-sm mb-0.5" style={{ color: "var(--ink)", fontFamily: "var(--font-playfair)" }}>{e.title}</p>
-                      <p className="text-xs" style={{ color: "var(--muted)" }}>{e.parkName} · {e.date}</p>
-                    </div>
-                    <Stars rating={e.rating} />
-                  </Link>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+          {tab === "journal" && (
+            <>
+              {entries.length === 0 ? (
+                <EmptyState
+                  title="No field notes yet."
+                  desc="Write parking, weather, trail condition, and next-time notes after a visit."
+                  primary={{ href: "/journal?action=new", label: "Write first note" }}
+                  secondary={{ href: "/explore", label: "Browse parks" }}
+                  starters={[
+                    { name: "Parking note", note: "Where you parked, what filled early, shuttle timing." },
+                    { name: "Trail condition", note: "Mud, snow, closure, crowd, or gear details." },
+                    { name: "Next time", note: "What you would start earlier, skip, or pack." },
+                  ]}
+                />
+              ) : (
+                <div className="space-y-3">
+                  {entries.map((entry) => (
+                    <Link
+                      key={entry.id}
+                      href={`/journal?id=${entry.id}`}
+                      className="flex flex-col gap-3 rounded-lg border bg-white p-4 transition hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between"
+                      style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>{entry.title || "Untitled entry"}</p>
+                        <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>{entry.parkName || "Park not selected"} · {formatDate(entry.date)}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {["Trail note", "Parking", "Weather"].map((tag) => (
+                            <span key={tag} className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: "var(--surface-soft)", color: "var(--muted-strong)" }}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Stars rating={entry.rating} />
+                        <span className="text-xs font-semibold" style={{ color: "var(--accent)" }}>View</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
-        {/* Trips */}
-        {tab === "trips" && (
-          <>
-            <div className="flex justify-end mb-5">
-              <Link
-                href="/planner"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-                style={{ background: "var(--accent)" }}
-              >
-                + New Trip
-              </Link>
-            </div>
-            {trips.length === 0 ? (
-              <EmptyState
-                icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}
-                title="No trips planned yet"
-                desc="Build multi-stop itineraries in the trip planner."
-                action={{ href: "/planner", label: "Open Planner" }}
-              />
-            ) : (
-              <div className="space-y-3">
-                {trips.map((t) => (
-                  <Link
-                    key={t.id}
-                    href="/planner"
-                    className="flex items-center justify-between p-4 rounded-2xl transition-all hover:-translate-y-0.5"
-                    style={{ background: "white", boxShadow: "var(--shadow-card)", border: "1px solid rgba(26,58,42,0.06)" }}
-                  >
-                    <div>
-                      <p className="font-semibold text-sm mb-0.5" style={{ color: "var(--ink)", fontFamily: "var(--font-playfair)" }}>{t.name}</p>
-                      <p className="text-xs" style={{ color: "var(--muted)" }}>
-                        {t.stops.length} {t.stops.length === 1 ? "stop" : "stops"}
-                        {t.startDate && ` · Starting ${t.startDate}`}
-                      </p>
-                    </div>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2">
-                      <polyline points="9 18 15 12 9 6"/>
-                    </svg>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+          {tab === "trips" && (
+            <>
+              {trips.length === 0 ? (
+                <EmptyState
+                  title="No trips planned yet."
+                  desc="Create a draft route, add stops, and review packing before you leave."
+                  primary={{ href: "/planner", label: "Plan a trip" }}
+                  secondary={{ href: "/planner", label: "Start with Yosemite weekend" }}
+                  starters={[
+                    { name: "Yosemite weekend", note: "3 days, arrival stop, main hike, backup route." },
+                    { name: "Utah parks road trip", note: "Compare drive time, heat, and permit notes." },
+                    { name: "Family day hike", note: "Easy route, parking note, short backup stop." },
+                  ]}
+                />
+              ) : (
+                <div className="space-y-3">
+                  {trips.map((trip) => (
+                    <Link
+                      key={trip.id}
+                      href="/planner"
+                      className="flex flex-col gap-3 rounded-lg border bg-white p-4 transition hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between"
+                      style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>{trip.name || "Untitled trip"}</p>
+                        <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                          {formatDate(trip.startDate)} · {trip.stops.length} {trip.stops.length === 1 ? "stop" : "stops"}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+                          Open
+                        </span>
+                        <span className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+                          Draft
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </main>
       </div>
     </div>
   );
@@ -271,12 +328,12 @@ export default function ProfilePage() {
 function FavCard({ park, onRemove }: { park: FavoritePark; onRemove: () => void }) {
   return (
     <div
-      className="rounded-2xl overflow-hidden relative group transition-all hover:-translate-y-1"
-      style={{ background: "white", boxShadow: "var(--shadow-card)" }}
+      className="group relative overflow-hidden rounded-lg border bg-white transition hover:-translate-y-0.5"
+      style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
     >
-      <Link href={`/parks/${park.code}`}>
-        <div className="h-36 relative" style={{ background: "var(--accent-soft)" }}>
-          {park.imageUrl && (
+      <Link href={`/parks/${park.code}`} className="block">
+        <div className="relative h-32" style={{ background: "var(--accent-soft)" }}>
+          {park.imageUrl ? (
             <Image
               src={park.imageUrl}
               alt={park.name}
@@ -284,50 +341,84 @@ function FavCard({ park, onRemove }: { park: FavoritePark; onRemove: () => void 
               className="object-cover"
               sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm font-semibold" style={{ color: "var(--accent)" }}>
+              TrailQuest
+            </div>
           )}
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }} />
         </div>
-        <div className="p-4">
-          <p className="font-semibold text-sm leading-snug mb-0.5" style={{ color: "var(--ink)", fontFamily: "var(--font-playfair)" }}>
+        <div className="p-3">
+          <p className="line-clamp-2 text-sm font-semibold leading-snug" style={{ color: "var(--ink)" }}>
             {park.name}
           </p>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>{park.states}</p>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>
+            {park.states || "NPS site"}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <span className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+              Saved
+            </span>
+            <span className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+              Compare later
+            </span>
+          </div>
         </div>
       </Link>
-      <button
-        onClick={(e) => { e.preventDefault(); onRemove(); }}
-        className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
-        style={{ background: "rgba(220,38,38,0.85)" }}
-        aria-label="Remove from saved parks"
-      >
-        ✕
-      </button>
+      <div className="flex items-center justify-between border-t px-3 py-2" style={{ borderColor: "var(--line)" }}>
+        <Link href="/planner" className="text-xs font-semibold" style={{ color: "var(--accent)" }}>Add to trip</Link>
+        <button
+          onClick={(event) => { event.preventDefault(); onRemove(); }}
+          className="text-xs font-semibold transition hover:opacity-70"
+          style={{ color: "#9f241b" }}
+        >
+          Remove
+        </button>
+      </div>
     </div>
   );
 }
 
 function EmptyState({
-  icon, title, desc, action,
+  title, desc, primary, secondary, starters,
 }: {
-  icon: React.ReactNode;
   title: string;
   desc: string;
-  action: { href: string; label: string };
+  primary: { href: string; label: string };
+  secondary: { href: string; label: string };
+  starters: { name: string; note: string }[];
 }) {
   return (
-    <div className="text-center py-16 rounded-2xl" style={{ background: "white", boxShadow: "var(--shadow-card)" }}>
-      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ background: "var(--accent-soft)" }}>
-        {icon}
+    <section className="rounded-lg border bg-white p-4 sm:p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(320px,1fr)] lg:items-start">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+            Starter
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold" style={{ color: "var(--ink)" }}>{title}</h2>
+          <p className="mt-2 max-w-xl text-sm leading-6" style={{ color: "var(--muted)" }}>{desc}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link href={primary.href} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white" style={{ background: "var(--ink)" }}>
+              {primary.label}
+            </Link>
+            <Link href={secondary.href} className="rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold" style={{ borderColor: "var(--line)", color: "var(--accent)" }}>
+              {secondary.label}
+            </Link>
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+          {starters.map((starter) => (
+            <Link
+              key={starter.name}
+              href="/explore"
+              className="rounded-lg border bg-[var(--surface)] p-3 transition hover:-translate-y-0.5"
+              style={{ borderColor: "var(--line)" }}
+            >
+              <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{starter.name}</p>
+              <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>{starter.note}</p>
+            </Link>
+          ))}
+        </div>
       </div>
-      <p className="font-bold mb-2" style={{ fontFamily: "var(--font-playfair)", color: "var(--ink)", fontSize: "1.1rem" }}>{title}</p>
-      <p className="text-sm mb-6 max-w-xs mx-auto" style={{ color: "var(--muted)" }}>{desc}</p>
-      <Link
-        href={action.href}
-        className="inline-block px-5 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-        style={{ background: "var(--accent)" }}
-      >
-        {action.label}
-      </Link>
-    </div>
+    </section>
   );
 }

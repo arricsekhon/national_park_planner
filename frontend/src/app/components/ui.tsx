@@ -8,8 +8,8 @@ function cx(...classes: Array<string | false | undefined>) {
 type ButtonTone = "primary" | "secondary" | "ghost" | "danger";
 
 const buttonTone: Record<ButtonTone, string> = {
-  primary: "bg-[var(--ink)] text-white shadow-[0_14px_34px_rgba(17,19,21,0.16)] hover:bg-[#252a2d]",
-  secondary: "border border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--surface-soft)]",
+  primary: "bg-[var(--ink)] text-white shadow-[0_12px_28px_rgba(17,19,21,0.14)] hover:bg-[#252a2d]",
+  secondary: "border border-[var(--line)] bg-white/82 text-[var(--ink)] hover:bg-white",
   ghost: "text-[var(--muted)] underline-offset-4 hover:text-[var(--ink)] hover:underline",
   danger: "text-red-600 hover:bg-red-50",
 };
@@ -23,7 +23,7 @@ export function Button({
     <button
       {...props}
       className={cx(
-        "inline-flex min-h-11 items-center justify-center rounded-lg px-5 text-sm font-semibold transition-all active:scale-95 disabled:scale-100 disabled:opacity-50",
+        "inline-flex min-h-11 items-center justify-center rounded-lg px-5 text-sm font-semibold transition-all active:scale-[0.98] disabled:scale-100 disabled:opacity-50",
         buttonTone[tone],
         className
       )}
@@ -35,8 +35,8 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       {...props}
-      className={cx("rounded-xl border bg-white/70", className)}
-      style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-card)", ...props.style }}
+      className={cx("rounded-lg border bg-white/72", className)}
+      style={{ borderColor: "rgba(17,19,21,0.08)", boxShadow: "0 14px 44px rgba(17,19,21,0.06)", ...props.style }}
     />
   );
 }
@@ -54,7 +54,7 @@ export function IconButton({
 }) {
   const sizes = { sm: "h-8 w-8", md: "h-9 w-9" };
   const tones: Record<string, string> = {
-    ghost: "bg-[rgba(17,19,21,0.05)] text-[var(--muted)] hover:bg-[rgba(17,19,21,0.1)] hover:text-[var(--ink)]",
+    ghost: "bg-[rgba(17,19,21,0.045)] text-[var(--muted)] hover:bg-[rgba(17,19,21,0.085)] hover:text-[var(--ink)]",
     primary: "bg-[var(--accent)] text-white hover:opacity-90",
     danger: "text-red-600 hover:bg-red-50",
   };

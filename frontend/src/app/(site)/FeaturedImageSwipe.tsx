@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { Park } from "@/lib/api";
+
+const AUTO_ADVANCE_MS = 4200;
 
 export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
   const [active, setActive] = useState(0);
@@ -11,6 +13,14 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
   const [mouseStartX, setMouseStartX] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const didDragRef = useRef(false);
+
+  useEffect(() => {
+    if (parks.length <= 1 || dragging || mouseStartX !== null || touchStartX !== null) return;
+    const timer = window.setTimeout(() => {
+      setActive((index) => (index + 1) % parks.length);
+    }, AUTO_ADVANCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [active, dragging, mouseStartX, parks.length, touchStartX]);
 
   const goNext = () => setActive((index) => (index + 1) % parks.length);
   const goPrev = () => setActive((index) => (index - 1 + parks.length) % parks.length);
@@ -139,7 +149,7 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
 
       </div>
 
-      <div className="mt-5 flex flex-col justify-between gap-5 md:flex-row md:items-center">
+      <div className="mt-5">
         <div>
           <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
             {current.fullName}
@@ -147,22 +157,6 @@ export default function FeaturedImageSwipe({ parks }: { parks: Park[] }) {
           <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
             {currentAddress?.city ? `${currentAddress.city}, ` : ""}{current.states}{currentActivities ? ` · ${currentActivities}` : ""}{currentFee ? ` · ${parseFloat(currentFee.cost) === 0 ? "Free entry" : `$${parseFloat(currentFee.cost).toFixed(0)} entry`}` : ""}
           </p>
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {parks.map((park, index) => (
-            <button
-              key={park.parkCode}
-              type="button"
-              onClick={() => setActive(index)}
-              className="h-2.5 shrink-0 rounded-full transition-all"
-              style={{
-                background: index === active % parks.length ? "var(--accent)" : "rgba(17,19,21,0.14)",
-                width: index === active % parks.length ? 54 : 30,
-              }}
-              aria-label={`Show ${park.fullName}`}
-            />
-          ))}
         </div>
       </div>
     </div>

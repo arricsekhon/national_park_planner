@@ -33,7 +33,7 @@ export default function BrandLogo({
           />
         </span>
         <span className="grid gap-0.5 leading-none" style={{ color: textColor }}>
-          <span className="text-lg font-bold uppercase">TrailQuest</span>
+          <span className="text-xl font-normal" style={{ fontFamily: "var(--font-macondo), cursive" }}>TrailQuest</span>
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">National Park Planner</span>
         </span>
       </span>
@@ -52,7 +52,7 @@ export default function BrandLogo({
           className={`h-full w-full object-contain ${imageToneClass}`}
         />
       </span>
-      <span className="text-[15px] font-semibold" style={{ color: textColor }}>
+      <span className="text-[22px] font-normal leading-none" style={{ color: textColor, fontFamily: "var(--font-macondo), cursive" }}>
         TrailQuest
       </span>
     </span>

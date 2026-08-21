@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, DM_Sans } from "next/font/google";
+import { Playfair_Display, DM_Sans, Macondo } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ParkDataProvider } from "@/lib/park-data";
 import { ToastProvider } from "@/lib/toast";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -18,6 +20,13 @@ const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-dm-sans",
   display: "swap",
+});
+
+const macondo = Macondo({
+  subsets: ["latin"],
+  variable: "--font-macondo",
+  display: "swap",
+  weight: "400",
 });
 
 const BASE_URL = "https://trailquest.app";
@@ -79,13 +88,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${playfair.variable} ${dmSans.variable}`}>
+    <html lang="en" className={`${playfair.variable} ${dmSans.variable} ${macondo.variable} font-sans`}>
       <body className="min-h-screen flex flex-col">
         <AuthProvider>
           <ParkDataProvider>
             <ToastProvider>
-              {children}
-              <Analytics />
+              <TooltipProvider>
+                {children}
+                <Toaster />
+                <Analytics />
+              </TooltipProvider>
             </ToastProvider>
           </ParkDataProvider>
         </AuthProvider>

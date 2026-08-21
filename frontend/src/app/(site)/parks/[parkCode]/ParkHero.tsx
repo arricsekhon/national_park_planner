@@ -131,8 +131,8 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
 
           <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto">
             <div
-              className="flex items-center gap-0.5 px-1.5 py-1.5 rounded-2xl"
-              style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)" }}
+              className="flex items-center gap-1 rounded-lg border px-1.5 py-1.5 backdrop-blur-md"
+              style={{ background: "rgba(17,19,21,0.24)", borderColor: "rgba(255,255,255,0.18)" }}
               role="group"
               aria-label="Park actions"
             >
@@ -141,7 +141,7 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
                 aria-label={isFav ? "Remove from saved parks" : "Save this park"}
                 aria-pressed={isFav}
                 data-tip={isFav ? "Saved" : "Save park"}
-                className="icon-btn-tooltip p-3 min-w-[44px] min-h-[44px] rounded-xl transition-all hover:bg-white/10 active:scale-90 flex items-center justify-center"
+                className="icon-btn-tooltip flex min-h-11 min-w-11 items-center justify-center rounded-lg p-3 transition-all hover:bg-white/10 active:scale-[0.96]"
                 style={{ color: isFav ? "#f87171" : "rgba(255,255,255,0.65)" }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={isFav ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -149,14 +149,14 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
                 </svg>
               </button>
 
-              <span className="w-px h-5 mx-0.5" style={{ background: "rgba(255,255,255,0.18)" }} aria-hidden="true" />
+              <span className="mx-0.5 h-5 w-px" style={{ background: "rgba(255,255,255,0.18)" }} aria-hidden="true" />
 
               <button
                 onClick={() => setVisitStatus(parkCode, status === "none" ? "want" : status === "want" ? "been" : "none")}
                 aria-label={status === "been" ? "Marked as visited — click to change" : status === "want" ? "Marked as want to go — click to change" : "Set visit status"}
                 aria-pressed={status !== "none"}
                 data-tip={status === "been" ? "Been here" : status === "want" ? "Want to go" : "Mark visited"}
-                className="icon-btn-tooltip p-3 min-w-[44px] min-h-[44px] rounded-xl transition-all hover:bg-white/10 active:scale-90 flex items-center justify-center"
+                className="icon-btn-tooltip flex min-h-11 min-w-11 items-center justify-center rounded-lg p-3 transition-all hover:bg-white/10 active:scale-[0.96]"
                 style={{ color: status === "been" ? "#86efac" : status === "want" ? "#fcd34d" : "rgba(255,255,255,0.65)" }}
               >
                 {status === "been" ? (
@@ -168,14 +168,14 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
                 )}
               </button>
 
-              <span className="w-px h-5 mx-0.5" style={{ background: "rgba(255,255,255,0.18)" }} aria-hidden="true" />
+              <span className="mx-0.5 h-5 w-px" style={{ background: "rgba(255,255,255,0.18)" }} aria-hidden="true" />
 
               <button
                 onClick={() => toggleCompare({ code: parkCode, name: parkName })}
                 aria-label={comparing ? "Remove from comparison" : "Add to comparison"}
                 aria-pressed={comparing}
                 data-tip={comparing ? "Remove from compare" : "Add to compare"}
-                className="icon-btn-tooltip p-3 min-w-[44px] min-h-[44px] rounded-xl transition-all hover:bg-white/10 active:scale-90 flex items-center justify-center"
+                className="icon-btn-tooltip flex min-h-11 min-w-11 items-center justify-center rounded-lg p-3 transition-all hover:bg-white/10 active:scale-[0.96]"
                 style={{ color: comparing ? "#fcd34d" : "rgba(255,255,255,0.65)" }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -183,13 +183,13 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
                 </svg>
               </button>
 
-              <span className="w-px h-5 mx-0.5" style={{ background: "rgba(255,255,255,0.18)" }} aria-hidden="true" />
+              <span className="mx-0.5 h-5 w-px" style={{ background: "rgba(255,255,255,0.18)" }} aria-hidden="true" />
 
               <Link
                 href={`/journal?action=new&parkCode=${parkCode}&parkName=${encodeURIComponent(parkName)}`}
                 aria-label="Write a journal entry for this park"
                 data-tip="Write journal"
-                className="icon-btn-tooltip p-3 min-w-[44px] min-h-[44px] rounded-xl transition-all hover:bg-white/10 active:scale-90 flex items-center justify-center"
+                className="icon-btn-tooltip flex min-h-11 min-w-11 items-center justify-center rounded-lg p-3 transition-all hover:bg-white/10 active:scale-[0.96]"
                 style={{ color: "rgba(255,255,255,0.65)" }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -200,10 +200,10 @@ export default function ParkHero({ photos, parkCode, parkName, parkStates, locat
 
             <button
               onClick={addToPlanner}
-              className="flex-1 sm:flex-none px-5 py-3 min-h-[44px] rounded-2xl text-sm font-bold text-white transition-all active:scale-95 hover:opacity-90"
-              style={{ background: "var(--amber)", boxShadow: "0 4px 20px rgba(200,134,10,0.45)" }}
+              className="min-h-11 flex-1 rounded-lg px-5 py-3 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] sm:flex-none"
+              style={{ background: "var(--ink)", boxShadow: "0 12px 28px rgba(17,19,21,0.24)" }}
             >
-              + Add to Trip
+              Add to trip
             </button>
           </div>
         </div>

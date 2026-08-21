@@ -3,9 +3,19 @@
 import Image from "next/image";
 import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { searchParks, parseLatLong, haversineDistance, type Park } from "@/lib/api";
 import { useParkData } from "@/lib/park-data";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const US_STATES = [
   ["", "All States"], ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],
@@ -249,34 +259,37 @@ function ExploreContent() {
   };
   return (
     <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
-      <div className="mx-auto flex min-h-[calc(100vh-66px)] max-w-[1680px] flex-col px-4 py-4 sm:px-6">
+      <div className="app-shell flex min-h-[calc(100vh-66px)] flex-col py-4 sm:py-5">
         <section
-          className="relative z-20 mb-4 overflow-hidden rounded-2xl border p-3 sm:p-5"
-          style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.78)", boxShadow: "var(--shadow-card)", backdropFilter: "blur(24px) saturate(145%)" }}
+          className="app-panel relative z-20 mb-4 overflow-hidden rounded-lg p-4"
         >
-          <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(220,233,243,0.5),rgba(255,255,255,0.86),rgba(229,242,239,0.58))]" />
-          <div className="flex flex-col gap-3 sm:gap-5">
-            <div className="max-w-2xl">
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.24em] sm:mb-2" style={{ color: "var(--accent)" }}>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
                 Explore
               </p>
-              <h1 className="text-2xl font-semibold sm:text-4xl lg:text-5xl" style={{ color: "var(--ink)" }}>
+              <h1 className="text-2xl font-semibold sm:text-3xl" style={{ color: "var(--ink)" }}>
                 Find a park that fits your trip.
               </h1>
-              <p className="hidden sm:block mt-3 max-w-xl text-sm leading-6 sm:text-base" style={{ color: "var(--muted)" }}>
+              <p className="mt-1.5 hidden max-w-xl text-sm leading-6 sm:block" style={{ color: "var(--muted)" }}>
                 Search by park, state, trail type, entry fee, season, or trip constraint.
+              </p>
+              </div>
+              <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+                {loading ? "Loading park details..." : `${displayParks.length} parks found`}
               </p>
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="mt-3 flex flex-col gap-2.5 sm:mt-5 sm:gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_9.5rem_auto]">
+          <form onSubmit={handleSearch} className="mt-3 flex flex-col gap-2.5 sm:gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_9.5rem_auto]">
             <div className="relative">
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search parks, trails, fees, season..."
-                className="min-h-11 w-full rounded-lg border px-4 pr-16 text-[15px] font-medium shadow-none transition-all sm:min-h-12"
+                className="min-h-11 w-full rounded-lg border px-4 pr-16 text-[15px] font-medium shadow-none transition-all"
                 style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
               />
               {query && (
@@ -306,7 +319,7 @@ function ExploreContent() {
               <select
                 value={stateCode}
                 onChange={(e) => setStateCode(e.target.value)}
-                className="hidden min-h-11 w-36 min-w-0 flex-none rounded-lg border px-4 text-sm font-semibold shadow-none sm:block sm:min-h-12 sm:w-44 lg:w-auto"
+                className="hidden min-h-11 w-36 min-w-0 flex-none rounded-lg border px-4 text-sm font-semibold shadow-none sm:block sm:w-44 lg:w-auto"
                 style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
               >
                 {US_STATES.map(([code, name]) => (
@@ -316,7 +329,7 @@ function ExploreContent() {
 
               <button
                 type="submit"
-                className="min-h-11 flex-1 rounded-lg px-5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95 sm:min-h-12 sm:flex-none sm:px-7"
+                className="min-h-11 flex-1 rounded-lg px-5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] sm:flex-none sm:px-7"
                 style={{ background: "var(--ink)" }}
               >
                 Search
@@ -325,7 +338,7 @@ function ExploreContent() {
               <button
                 type="button"
                 onClick={() => setFilterSheetOpen(true)}
-                className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border px-5 text-sm font-semibold transition active:scale-95 sm:hidden"
+                className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border px-5 text-sm font-semibold transition active:scale-[0.98] sm:hidden"
                 style={{ background: "rgba(255,255,255,0.78)", borderColor: "var(--line)", color: "var(--ink)" }}
                 aria-haspopup="dialog"
                 aria-expanded={filterSheetOpen}
@@ -345,24 +358,16 @@ function ExploreContent() {
             </div>
           </form>
 
-          <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <p className="order-first shrink-0 text-xs font-semibold uppercase tracking-[0.16em] lg:order-last" style={{ color: "var(--muted)" }}>
-              {loading ? "Loading park details..." : `${displayParks.length} parks found`}
-            </p>
-
-            <div className="relative lg:order-first">
+          <div className="mt-3 flex flex-col gap-2 sm:gap-3">
+            <div className="relative">
             <div className="flex gap-1.5 overflow-x-auto pb-1 pr-10 [scrollbar-width:none] sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pr-0 [&::-webkit-scrollbar]:hidden">
               {/* Near me chip */}
               <button
                 type="button"
                 onClick={handleNearMe}
                 disabled={nearMeLoading}
-                className="flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-all active:scale-95 disabled:opacity-40"
-                style={{
-                  background: userLocation ? "var(--accent)" : "rgba(255,255,255,0.7)",
-                  color: userLocation ? "white" : "var(--muted)",
-                  border: `1px solid ${userLocation ? "transparent" : "var(--line)"}`,
-                }}
+                data-active={userLocation ? "true" : "false"}
+                className="app-chip flex shrink-0 items-center gap-1.5 px-3 text-xs font-semibold active:scale-[0.98] disabled:opacity-40"
               >
                 {nearMeLoading ? (
                   <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
@@ -387,12 +392,8 @@ function ExploreContent() {
               <button
                 type="button"
                 onClick={() => setNpOnly((v) => !v)}
-                className="flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-all active:scale-95"
-                style={{
-                  background: npOnly ? "#a96f2d" : "rgba(255,255,255,0.7)",
-                  color: npOnly ? "white" : "var(--muted)",
-                  border: `1px solid ${npOnly ? "transparent" : "var(--line)"}`,
-                }}
+                data-active={npOnly ? "true" : "false"}
+                className="app-chip flex shrink-0 items-center gap-1.5 px-3 text-xs font-semibold active:scale-[0.98]"
                 title="The US has 63 designated National Parks. The full NPS system manages 474+ sites including monuments, seashores, historic sites, and more."
               >
                 {npOnly && (
@@ -417,12 +418,8 @@ function ExploreContent() {
                       setActivityFilter(activityFilter === act ? "" : act);
                     }
                   }}
-                  className="min-h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-all hover:-translate-y-0.5 active:scale-95"
-                  style={{
-                    background: activityFilter === act || (act === "No entry fee" && noEntryFee) || tripNeeds.includes(act) ? "var(--accent)" : "rgba(255,255,255,0.7)",
-                    color: activityFilter === act || (act === "No entry fee" && noEntryFee) || tripNeeds.includes(act) ? "white" : "var(--muted)",
-                    border: `1px solid ${activityFilter === act || (act === "No entry fee" && noEntryFee) || tripNeeds.includes(act) ? "transparent" : "var(--line)"}`,
-                  }}
+                  data-active={activityFilter === act || (act === "No entry fee" && noEntryFee) || tripNeeds.includes(act) ? "true" : "false"}
+                  className="app-chip shrink-0 px-3 text-xs font-semibold active:scale-[0.98]"
                 >
                   {act}
                 </button>
@@ -568,8 +565,8 @@ function ExploreContent() {
           </div>
         )}
 
-        <section className="grid flex-1 gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
-          <aside className="hidden self-start rounded-lg border bg-white/78 p-4 lg:sticky lg:block lg:top-[calc(var(--nav-h)+16px)]" style={{ borderColor: "var(--line)" }}>
+        <section className="grid flex-1 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <aside className="app-panel hidden self-start rounded-lg p-4 lg:sticky lg:block lg:top-[calc(var(--nav-h)+16px)]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>Filters</p>
@@ -593,8 +590,7 @@ function ExploreContent() {
           </aside>
 
           <div
-            className="flex min-h-[580px] min-w-0 flex-col overflow-hidden rounded-lg border"
-            style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.76)", boxShadow: "var(--shadow-card)", backdropFilter: "blur(18px)" }}
+            className="app-panel flex min-h-[580px] min-w-0 flex-col overflow-hidden rounded-lg"
           >
             <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--line)" }}>
               <div>
@@ -638,7 +634,7 @@ function ExploreContent() {
 
             <div className="flex-1 overflow-y-auto px-3 pb-24 pt-3 sm:px-4">
               {loading ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="animate-pulse rounded-lg border p-3" style={{ background: "rgba(255,255,255,0.72)", borderColor: "var(--line)" }}>
                       <div className="h-40 rounded-lg" style={{ background: "var(--linen)" }} />
@@ -651,7 +647,7 @@ function ExploreContent() {
                   ))}
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {displayParks.length === 0 && (
                     <div className="rounded-lg border px-6 py-16 text-center md:col-span-2 xl:col-span-3" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.7)" }}>
                       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg" style={{ background: "var(--surface-soft)" }}>
@@ -693,7 +689,7 @@ function ExploreContent() {
                     <button
                       onClick={loadMore}
                       disabled={loadingMore}
-                      className="rounded-lg py-3.5 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-40 md:col-span-2 xl:col-span-3"
+                      className="rounded-lg py-3.5 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-40 md:col-span-2 xl:col-span-3 2xl:col-span-4"
                       style={{ background: "var(--ink)", color: "white" }}
                     >
                       {loadingMore ? "Loading more parks..." : `Load more parks`}
@@ -751,7 +747,7 @@ function FilterGroup({
               type="button"
               key={option}
               onClick={() => onChange(active ? "" : option)}
-              className="min-h-9 rounded-lg border px-3 text-left text-xs font-semibold transition hover:bg-white"
+              className="min-h-8 rounded-md border px-2.5 text-left text-xs font-medium transition hover:bg-white"
               style={{
                 background: active ? "var(--accent)" : "rgba(255,255,255,0.58)",
                 borderColor: active ? "var(--accent)" : "var(--line)",
@@ -786,7 +782,7 @@ function TripNeedsFilter({
               type="button"
               key={need}
               onClick={() => onToggle(need)}
-              className="flex min-h-8 items-center gap-2 rounded-lg px-2 text-left text-xs font-semibold transition hover:bg-white"
+              className="flex min-h-8 items-center gap-2 rounded-md px-2 text-left text-xs font-medium transition hover:bg-white"
               style={{ color: active ? "var(--accent)" : "var(--muted-strong)" }}
             >
               <span
@@ -809,27 +805,6 @@ function TripNeedsFilter({
   );
 }
 
-function MetaBadge({
-  label, value, tone,
-}: {
-  label: string;
-  value: string;
-  tone: "green" | "sand" | "blue";
-}) {
-  const styles = {
-    green: { background: "var(--accent-soft)", color: "var(--accent)" },
-    sand: { background: "var(--sand)", color: "var(--ink)" },
-    blue: { background: "rgba(220,233,243,0.68)", color: "var(--muted-strong)" },
-  }[tone];
-
-  return (
-    <div className="min-w-0 rounded-lg px-2.5 py-2" style={styles}>
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] opacity-70">{label}</p>
-      <p className="mt-0.5 min-w-0 break-words text-xs font-semibold leading-snug sm:truncate">{value}</p>
-    </div>
-  );
-}
-
 function ParkListCard({
   park, selected, distance, onHover,
 }: {
@@ -838,6 +813,7 @@ function ParkListCard({
   distance: number | null;
   onHover: () => void;
 }) {
+  const router = useRouter();
   const { toggleFavorite, isFavorite, getVisitStatus, setVisitStatus, toggleCompare, inCompare } = useParkData();
   const image = park.images?.[0];
   const feeCost = getEntranceCost(park);
@@ -847,6 +823,7 @@ function ParkListCard({
   const bestSeason = getBestSeason(park);
   const planningNotes = getPlanningNotes(park);
   const topActivity = park.activities?.[0]?.name ?? "Check activities";
+  const entryLabel = feeCost === null ? "Entry check" : feeCost === 0 ? "Free entry" : `$${feeCost} entry`;
 
   const handleFav = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -864,26 +841,39 @@ function ParkListCard({
     toggleCompare({ code: park.parkCode, name: park.fullName });
   };
 
-  return (
-    <article className="min-w-0" onMouseEnter={onHover}>
-      <div
-        className="group relative min-w-0 overflow-hidden rounded-lg border p-2 transition-all duration-300 hover:-translate-y-0.5 sm:p-2.5"
-        style={{
-          background: selected ? "rgba(229,242,239,0.92)" : "rgba(255,255,255,0.74)",
-          borderColor: selected ? "rgba(23,109,101,0.28)" : "var(--line)",
-          boxShadow: selected ? "0 14px 34px rgba(23,109,101,0.12)" : "0 8px 24px rgba(17,19,21,0.05)",
-        }}
-      >
-        {/* Full-card link — action buttons sit above via z-index */}
-        <Link href={`/parks/${park.parkCode}`} className="absolute inset-0 z-0 rounded-lg" aria-label={`View ${park.fullName}`} />
+  const openPark = () => {
+    router.push(`/parks/${park.parkCode}`);
+  };
 
-        <div className="relative h-40 min-w-0 overflow-hidden rounded-lg" style={{ background: "var(--surface-soft)" }}>
+  const handleCardKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openPark();
+    }
+  };
+
+  return (
+    <article className="h-full min-w-0" onMouseEnter={onHover}>
+      <Card
+        role="link"
+        tabIndex={0}
+        onClick={openPark}
+        onKeyDown={handleCardKeyDown}
+        className="group relative h-full min-w-0 cursor-pointer gap-0 overflow-hidden rounded-lg pt-0 outline-none transition-all duration-300 hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-ring/50"
+        style={{
+          background: "white",
+          borderColor: selected ? "rgba(23,109,101,0.24)" : "var(--line)",
+          boxShadow: selected ? "0 12px 28px rgba(23,109,101,0.1)" : "0 5px 18px rgba(17,19,21,0.04)",
+        }}
+        aria-label={`View ${park.fullName}`}
+      >
+        <div className="relative z-10 aspect-[16/10] min-w-0 overflow-hidden" style={{ background: "var(--surface-soft)" }}>
           {image ? (
             <Image
               src={image.url}
               alt={image.altText || park.fullName}
               fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              className="object-cover brightness-[0.96] saturate-[0.95] transition-transform duration-700 group-hover:scale-[1.025]"
               sizes="(min-width: 1536px) 25vw, (min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
             />
           ) : (
@@ -894,28 +884,20 @@ function ParkListCard({
               </svg>
             </div>
           )}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.1)_48%,rgba(0,0,0,0.52)_100%)]" />
-          <div className="absolute left-2.5 right-2.5 top-2.5 flex min-w-0 items-start justify-between gap-2 sm:left-3 sm:right-3 sm:top-3">
+          <div className="absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.08)_55%,rgba(0,0,0,0.26)_100%)]" />
+          <div className="absolute left-2.5 right-2.5 top-2.5 z-20 flex min-w-0 items-start justify-between gap-2 sm:left-3 sm:right-3 sm:top-3">
             <div className="flex min-w-0 flex-col items-start gap-1.5">
-              {park.designation && (
-                <span className="max-w-[12rem] truncate rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold leading-tight text-white/90 backdrop-blur-sm">
-                  {park.designation}
-                </span>
-              )}
               {distance !== null && (
-                <span className="rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm leading-tight">
+                <Badge variant="secondary" className="border-white/18 bg-black/35 text-[10px] leading-tight text-white/90 backdrop-blur-sm">
                   {distance < 10 ? distance.toFixed(1) : Math.round(distance)} mi
-                </span>
+                </Badge>
               )}
             </div>
-            <span className="shrink-0 rounded-full border border-white/18 bg-black/40 px-2.5 py-1 text-[10px] font-semibold leading-tight text-white/90 backdrop-blur-sm">
-              {park.states}
-            </span>
           </div>
           <button
             type="button"
             onClick={handleFav}
-            className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-lg border border-white/22 bg-white/18 text-white backdrop-blur-xl transition-all hover:scale-105 active:scale-95"
+            className="absolute bottom-3 right-3 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/28 bg-black/22 text-white backdrop-blur-md transition-all hover:bg-black/32 active:scale-95"
             style={{ color: fav ? "#ff7a8a" : "white" }}
             aria-label={fav ? "Remove saved park" : "Save park"}
           >
@@ -925,43 +907,52 @@ function ParkListCard({
           </button>
         </div>
 
-        <div className="min-w-0 px-2 pb-2 pt-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="line-clamp-2 text-base font-semibold leading-tight" style={{ color: "var(--ink)" }}>
-                {park.fullName}
-              </p>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>
-                {park.states} · {park.designation || "NPS site"}
-              </p>
-              <p className="mt-2 line-clamp-2 text-sm leading-6" style={{ color: "var(--muted)" }}>{park.description}</p>
+        <div className="relative z-10 flex min-w-0 flex-1 flex-col">
+          <CardHeader className="relative z-10 px-4 pb-0 pt-4">
+            <CardAction>
+              <span className="text-xs font-semibold leading-none" style={{ color: "var(--muted)" }}>
+                {park.states}
+              </span>
+            </CardAction>
+            <CardTitle className="line-clamp-2 pr-1 text-[18px] font-semibold leading-[1.12] text-[var(--ink)] transition-colors group-hover/card:text-[var(--accent)]">
+              {park.fullName}
+            </CardTitle>
+            <p className="mt-1 min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--accent)" }}>
+              {park.designation || "NPS site"}
+            </p>
+            <CardDescription className="line-clamp-2 text-sm leading-6" style={{ color: "var(--muted)" }}>
+              {park.description}
+            </CardDescription>
+          </CardHeader>
+
+          <div className="relative z-10 min-w-0 px-4 pb-4 pt-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium" style={{ color: "var(--muted-strong)" }}>
+              <span>{entryLabel}</span>
+              <span aria-hidden="true" style={{ color: "var(--line)" }}>•</span>
+              <span>Best {bestSeason}</span>
+              <span aria-hidden="true" style={{ color: "var(--line)" }}>•</span>
+              <span className="min-w-0 truncate">{topActivity}</span>
+            </div>
+
+            <div className="mt-3 grid gap-1.5 border-t pt-3" style={{ borderColor: "var(--line)" }}>
+              {planningNotes.map((note) => (
+                <div key={note} className="flex min-w-0 items-start gap-2 text-xs font-medium leading-5" style={{ color: "var(--muted-strong)" }}>
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
+                  <span className="min-w-0 break-words">{note}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="mt-3 grid min-w-0 grid-cols-2 gap-1.5 min-[430px]:grid-cols-3">
-            <MetaBadge label="Entry" value={feeCost === null ? "Check" : feeCost === 0 ? "Free" : `$${feeCost}`} tone="green" />
-            <MetaBadge label="Best" value={bestSeason} tone="sand" />
-            <MetaBadge label="Top" value={topActivity} tone="blue" />
-          </div>
-
-          <div className="mt-3 grid gap-1.5">
-            {planningNotes.map((note) => (
-              <div key={note} className="flex min-w-0 items-start gap-2 rounded-lg border bg-white/70 px-2.5 py-2 text-xs font-semibold leading-5" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
-                <span className="min-w-0 break-words">{note}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="relative z-10 mt-3 flex min-w-0 flex-col gap-2 border-t pt-3 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between" style={{ borderColor: "var(--line)" }}>
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <CardFooter className="relative z-10 mt-auto flex min-w-0 flex-col items-stretch gap-2 border-t bg-white px-4 py-3 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between" style={{ borderColor: "var(--line)" }}>
+            <div className="flex min-w-0 flex-wrap items-center gap-1">
               <button
                 type="button"
                 onClick={handleStatus}
                 data-tip={status === "been" ? "Been here" : status === "want" ? "Want to go" : "Mark visited"}
-                className="icon-btn-tooltip flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:scale-105 active:scale-95"
+                className="icon-btn-tooltip flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:bg-black/[0.04] active:scale-95"
                 style={{
-                  background: status === "been" ? "rgba(23,109,101,0.12)" : status === "want" ? "rgba(169,111,45,0.12)" : "rgba(17,19,21,0.05)",
+                  background: status === "been" ? "rgba(23,109,101,0.1)" : status === "want" ? "rgba(169,111,45,0.1)" : "transparent",
                   color: status === "been" ? "var(--accent)" : status === "want" ? "var(--amber)" : "var(--muted)",
                 }}
                 aria-label="Change visit status"
@@ -978,9 +969,9 @@ function ParkListCard({
                 type="button"
                 onClick={handleCompare}
                 data-tip={comparing ? "Remove from compare" : "Compare parks"}
-                className="icon-btn-tooltip flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                className="icon-btn-tooltip flex h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-all hover:bg-black/[0.04] active:scale-95"
                 style={{
-                  background: comparing ? "rgba(169,111,45,0.12)" : "rgba(17,19,21,0.05)",
+                  background: comparing ? "rgba(169,111,45,0.1)" : "transparent",
                   color: comparing ? "var(--amber)" : "var(--muted)",
                 }}
                 aria-label={comparing ? "Remove from compare" : "Compare park"}
@@ -988,20 +979,20 @@ function ParkListCard({
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
                 </svg>
-                Compare
+                <span className="hidden sm:inline">Compare</span>
               </button>
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Link href="/planner" className="rounded-lg border px-3 py-2 text-xs font-semibold" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
-                Add to trip
-              </Link>
-              <span className="rounded-lg px-3 py-2 text-xs font-semibold transition-all group-hover:translate-x-0.5" style={{ background: "var(--ink)", color: "white" }}>
-                Details
-              </span>
+              <Button asChild variant="ghost" size="sm" className="relative z-20 px-2 text-[var(--muted-strong)] hover:bg-[var(--surface-soft)]">
+                <Link href="/planner" onClick={(e) => e.stopPropagation()}>Add to trip</Link>
+              </Button>
+              <Button asChild size="sm" className="relative z-20 bg-[var(--ink)] text-white transition-all hover:bg-[#252a2d] group-hover:translate-x-0.5">
+                <Link href={`/parks/${park.parkCode}`} onClick={(e) => e.stopPropagation()}>Details</Link>
+              </Button>
             </div>
-          </div>
+          </CardFooter>
         </div>
-      </div>
+      </Card>
     </article>
   );
 }
@@ -1009,7 +1000,7 @@ function ParkListCard({
 function ExploreSkeleton() {
   return (
     <div className="min-h-screen pt-[var(--nav-h)] animate-pulse" style={{ background: "var(--surface)" }}>
-      <div className="mx-auto flex max-w-[1680px] flex-col px-4 py-4 sm:px-6">
+      <div className="app-shell flex flex-col py-4 sm:py-5">
         <div className="mb-4 rounded-[2.2rem] border p-5" style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(255,255,255,0.78)" }}>
           <div className="h-3 w-16 rounded-full mb-3" style={{ background: "var(--linen)" }} />
           <div className="h-10 w-56 rounded-full mb-2" style={{ background: "var(--linen)" }} />

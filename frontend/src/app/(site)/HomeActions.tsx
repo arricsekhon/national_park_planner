@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { MapPin, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const SEARCH_CHIPS = ["Yosemite", "easy hikes", "camping", "no entry fee"];
 
@@ -17,38 +20,37 @@ export function HeroSearchAndStats() {
   };
 
   return (
-    <>
+    <div className="mx-auto mt-6 flex w-full max-w-2xl flex-col items-center">
       <form
         onSubmit={handleSearch}
-        className="animate-hero-3 mt-6 flex w-full max-w-full min-w-0 flex-col gap-1.5 rounded-lg p-1.5 sm:max-w-lg sm:flex-row sm:items-center"
-        style={{ background: "rgba(255,255,255,0.88)", border: "1px solid rgba(255,255,255,0.24)", boxShadow: "0 14px 38px rgba(0,0,0,0.16)" }}
+        className="grid w-full grid-cols-[1fr_auto] items-center gap-2 rounded-xl bg-black/24 px-2.5 py-1.5 shadow-[0_16px_38px_rgba(0,0,0,0.18)] ring-1 ring-white/18 backdrop-blur-md"
       >
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search park, state, activity"
-          className="min-h-10 w-full min-w-0 rounded-md border-0 bg-transparent px-3 text-sm text-[var(--ink)] shadow-none placeholder:text-black/38 focus:outline-none sm:flex-1"
-          aria-label="Search parks"
-        />
-        <button
+        <div className="relative min-w-0">
+          <Search className="pointer-events-none absolute left-2 top-1/2 size-5 -translate-y-1/2 text-white/65" aria-hidden="true" />
+          <Input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search park, state, activity"
+            className="h-10 rounded-lg border-0 !bg-transparent pl-10 text-base text-white shadow-none placeholder:text-white/55 focus-visible:border-0 focus-visible:ring-0 md:text-base"
+            aria-label="Search parks"
+          />
+        </div>
+        <Button
           type="submit"
-          className="min-h-10 w-full shrink-0 rounded-md px-4 text-sm font-semibold transition-all hover:opacity-90 active:scale-95 sm:w-auto"
-          style={{ background: "var(--ink)", color: "white" }}
+          className="h-10 rounded-lg bg-white px-5 text-base text-[var(--ink)] hover:bg-white/90"
         >
           Search
-        </button>
+        </Button>
       </form>
 
-      <div
-        className="animate-hero-4 mt-3"
-      >
-        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
+      <div className="mt-3 flex w-full justify-center">
+        <div className="flex max-w-full justify-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {SEARCH_CHIPS.map((chip) => (
             <Link
               key={chip}
               href={`/explore?q=${encodeURIComponent(chip)}`}
-              className="shrink-0 snap-start rounded-md border border-white/18 bg-black/24 px-3 py-1.5 text-xs font-medium text-white/76 transition-all hover:bg-black/34 hover:text-white active:scale-95"
+              className="shrink-0 rounded-md border border-white/18 bg-black/26 px-3 py-1.5 text-xs font-medium text-white/78 transition hover:bg-black/36 hover:text-white"
             >
               {chip}
             </Link>
@@ -56,6 +58,13 @@ export function HeroSearchAndStats() {
         </div>
       </div>
 
-    </>
+      <Link
+        href="/explore"
+        className="mt-4 inline-flex items-center justify-center gap-2 text-sm font-semibold text-white/82 transition hover:text-white"
+      >
+        <MapPin className="size-4" aria-hidden="true" />
+        Browse all national park units
+      </Link>
+    </div>
   );
 }

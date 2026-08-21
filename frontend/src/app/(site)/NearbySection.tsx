@@ -3,7 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { Check, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { haversineDistance, parseLatLong, searchParks, type Park } from "@/lib/api";
+
+const NEARBY_PREVIEW = [
+  { label: "Sort nearby park units by distance" },
+  { label: "Keep fees, activities, and trail notes visible" },
+  { label: "Use the result only for this view" },
+];
 
 export default function NearbySection() {
   const [nearbyParks, setNearbyParks] = useState<{ park: Park; dist: number }[]>([]);
@@ -44,30 +53,17 @@ export default function NearbySection() {
   };
 
   return (
-    <section className="premium-shell pb-24">
-      <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-        <div>
+    <section className="premium-shell pb-20">
+      {nearbyParks.length > 0 ? (
+        <>
+        <div className="mb-6 max-w-3xl">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
             Nearby
           </p>
-          <h2 className="text-4xl font-semibold sm:text-6xl" style={{ color: "var(--ink)" }}>
+          <h2 className="text-4xl font-semibold sm:text-5xl" style={{ color: "var(--ink)" }}>
             Start close to home.
           </h2>
         </div>
-        {!nearbyDone && (
-          <button
-            type="button"
-            onClick={handleNearMe}
-            disabled={nearbyLoading}
-            className="inline-flex min-h-12 items-center justify-center rounded-lg px-6 text-sm font-semibold transition-all active:scale-95 disabled:opacity-50"
-            style={{ background: "var(--ink)", color: "white" }}
-          >
-            {nearbyLoading ? "Locating..." : "Use my location"}
-          </button>
-        )}
-      </div>
-
-      {nearbyParks.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-3">
           {nearbyParks.map(({ park, dist }) => (
             <Link
@@ -98,22 +94,64 @@ export default function NearbySection() {
             </Link>
           ))}
         </div>
-      ) : !nearbyLoading ? (
-        <div className="rounded-xl border px-8 py-14 text-center" style={{ background: "rgba(255,255,255,0.58)", borderColor: "var(--line)" }}>
-          <p className="text-xl font-semibold" style={{ color: "var(--ink)" }}>
-            See the closest park sites in one step.
-          </p>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-7" style={{ color: "var(--muted)" }}>
-            Location stays in your browser. It is only used to sort nearby parks for this view.
-          </p>
-          {error && (
-            <p role="alert" className="mx-auto mt-4 max-w-md text-sm font-medium text-red-600">
-              {error}
+        </>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[0.42fr_0.58fr] lg:items-start">
+          <div className="max-w-sm pt-1">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+              Nearby
             </p>
-          )}
+            <h2 className="text-3xl font-semibold leading-tight sm:text-[2.65rem]" style={{ color: "var(--ink)" }}>
+              Find parks near where you are.
+            </h2>
+            <p className="mt-4 text-sm leading-7" style={{ color: "var(--muted)" }}>
+              Sort by distance without saving your location to your account.
+            </p>
+          </div>
+
+          <Card className="ml-auto w-full max-w-xl rounded-lg border-[var(--line)] bg-white p-0 shadow-[0_6px_20px_rgba(17,19,21,0.035)]">
+            <CardHeader className="border-b border-[var(--line)] px-5 py-4">
+              <CardTitle className="text-lg font-semibold text-[var(--ink)]">
+                Use location for nearby results
+              </CardTitle>
+              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                Your browser asks first. TrailQuest only uses the answer to sort this list.
+              </p>
+            </CardHeader>
+
+            <CardContent className="px-5 py-4">
+              <div className="grid gap-2.5">
+                {NEARBY_PREVIEW.map((item) => (
+                  <div key={item.label} className="flex items-center gap-3 text-sm text-[var(--ink-soft)]">
+                    <Check className="size-4 shrink-0 text-[var(--accent)]" aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {error && (
+                <p role="alert" className="mt-4 text-sm font-medium text-red-600">
+                  {error}
+                </p>
+              )}
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3 border-t border-[var(--line)] bg-[#f7f8f5] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                <ShieldCheck className="size-4" aria-hidden="true" />
+                Nothing is stored after sorting.
+              </div>
+              <Button
+                type="button"
+                onClick={handleNearMe}
+                disabled={nearbyLoading}
+                className="h-10 rounded-lg bg-[var(--ink)] px-4 text-sm text-white shadow-none hover:bg-[#252a2d]"
+              >
+                {nearbyLoading ? "Locating..." : "Use my location"}
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
-      ) : null}
+      )}
     </section>
   );
 }
-

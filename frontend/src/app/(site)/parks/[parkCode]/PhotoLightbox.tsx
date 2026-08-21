@@ -48,7 +48,10 @@ export default function PhotoLightbox({
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.93)" }}
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
     >
       {/* Counter */}
       <span className="absolute top-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-white/50 tabular-nums pointer-events-none">
@@ -58,7 +61,10 @@ export default function PhotoLightbox({
       {/* Close */}
       <button
         type="button"
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
         className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
         aria-label="Close photo viewer"
       >

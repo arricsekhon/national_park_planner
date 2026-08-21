@@ -11,6 +11,23 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/lib/toast";
 import { SyncNotice } from "@/app/components/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TripStop {
   id: string;
@@ -62,6 +79,7 @@ type IconName =
   | "trash";
 
 const STORAGE_KEY = "trailquest_trips";
+const PACKED_STORAGE_KEY = "trailquest_packed_items";
 const DAY_MS = 86400000;
 const TRIP_STARTERS = [
   {
@@ -124,6 +142,13 @@ function formatDate(value: string): string {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+function formatInputDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function dateSummary(trip: Trip): string {
@@ -229,6 +254,19 @@ function saveTrips(trips: Trip[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
 }
 
+function loadPackedItems(): Record<string, string[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(PACKED_STORAGE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function savePackedItems(items: Record<string, string[]>) {
+  localStorage.setItem(PACKED_STORAGE_KEY, JSON.stringify(items));
+}
+
 function rowToTrip(row: Record<string, unknown>): Trip {
   return {
     id: row.id as string,
@@ -254,7 +292,9 @@ export default function PlannerPage() {
   const [showChecklist, setShowChecklist] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<"saved" | "error" | null>(null);
-  const [mobileTab, setMobileTab] = useState<"trips" | "editor">("trips");
+  const [packedItemsByTrip, setPackedItemsByTrip] = useState<Record<string, string[]>>(() => loadPackedItems());
+  const [mobileTab, setMobileTab] = useState<"trips" | "plan" | "map" | "notes">("trips");
+  const [tripSheetOpen, setTripSheetOpen] = useState(false);
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AiItinerary | null>(null);
@@ -312,7 +352,7 @@ export default function PlannerPage() {
   // Auto-switch to editor on mobile when a trip is selected
   useEffect(() => {
     if (!activeId) return;
-    const timer = window.setTimeout(() => setMobileTab("editor"), 0);
+    const timer = window.setTimeout(() => setMobileTab("plan"), 0);
     return () => window.clearTimeout(timer);
   }, [activeId]);
 
@@ -462,7 +502,24 @@ export default function PlannerPage() {
   const packingList = activeTrip
     ? generatePackingList(activeTrip.stops, activeTrip.startDate, activeTrip.endDate)
     : [];
+  const packedItems = activeTrip ? packedItemsByTrip[activeTrip.id] ?? [] : [];
+  const packedCount = packedItems.filter((item) => packingList.includes(item)).length;
   const tripDays = activeTrip ? getTripDays(activeTrip.startDate, activeTrip.endDate) : 0;
+
+  const togglePackedItem = (item: string, checked: boolean) => {
+    if (!activeTrip) return;
+    setPackedItemsByTrip((prev) => {
+      const current = new Set(prev[activeTrip.id] ?? []);
+      if (checked) {
+        current.add(item);
+      } else {
+        current.delete(item);
+      }
+      const next = { ...prev, [activeTrip.id]: Array.from(current) };
+      savePackedItems(next);
+      return next;
+    });
+  };
 
   const generateItinerary = async () => {
     if (!activeTrip || !activeTrip.stops.length) return;
@@ -517,27 +574,20 @@ export default function PlannerPage() {
       {!user && (
         <SyncNotice>Sign in to sync trips across devices.</SyncNotice>
       )}
-      {/* Mobile tab toggle */}
-      <div className="flex lg:hidden border-b" style={{ background: "white", borderColor: "var(--line)" }}>
-        {(["trips", "editor"] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setMobileTab(tab)}
-            className="flex-1 py-3.5 text-sm font-semibold relative transition-colors"
-            style={{ color: mobileTab === tab ? "var(--ink)" : "var(--muted)" }}
-          >
-            {tab === "trips" ? `Trips (${trips.length})` : "Editor"}
-            {mobileTab === tab && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full" style={{ background: "var(--accent)" }} />
-            )}
-          </button>
-        ))}
+      <div className="sticky top-[var(--nav-h)] z-30 border-b bg-white/95 px-3 py-2 backdrop-blur lg:hidden" style={{ borderColor: "var(--line)" }}>
+        <Tabs value={mobileTab} onValueChange={(value) => setMobileTab(value as typeof mobileTab)} className="gap-0">
+          <TabsList className="grid h-10 w-full grid-cols-4 rounded-lg bg-[var(--surface)] p-1">
+            <TabsTrigger value="trips" className="rounded-md text-xs">Trips</TabsTrigger>
+            <TabsTrigger value="plan" className="rounded-md text-xs" disabled={!activeTrip}>Plan</TabsTrigger>
+            <TabsTrigger value="map" className="rounded-md text-xs" disabled={!activeTrip}>Map</TabsTrigger>
+            <TabsTrigger value="notes" className="rounded-md text-xs" disabled={!activeTrip}>Notes</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      <div className="mx-auto grid min-h-[calc(100vh-66px)] max-w-[1540px] gap-4 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="mx-auto grid min-h-[calc(100vh-66px)] w-full max-w-[1760px] gap-4 px-3 py-3 sm:px-4 sm:py-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
         <aside
-          className={`${mobileTab === "editor" ? "hidden" : "block"} lg:block rounded-lg border bg-white/75 p-3.5 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
+          className={`${mobileTab === "trips" ? "block" : "hidden"} lg:block rounded-lg border bg-white/75 p-3.5 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
           style={{ borderColor: "var(--line)", backdropFilter: "blur(18px)" }}
         >
           <div className="flex items-center justify-between gap-3">
@@ -552,40 +602,40 @@ export default function PlannerPage() {
                 Draft routes, dates, packing, and notes.
               </p>
             </div>
-            <button
+            <Button
               type="button"
               onClick={() => newTrip()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white transition hover:-translate-y-0.5 active:translate-y-0"
-              style={{ background: "var(--ink)", boxShadow: "0 12px 26px rgba(17,19,21,0.16)" }}
+              size="icon-lg"
+              className="shrink-0 bg-[var(--ink)] text-white shadow-[0_12px_26px_rgba(17,19,21,0.16)] hover:bg-[var(--ink)]/90"
               aria-label="New trip"
               title="New trip"
             >
               <Icon name="plus" />
-            </button>
+            </Button>
           </div>
 
           <div className="mt-4 flex items-center justify-between rounded-lg border bg-[var(--surface)] px-3 py-2" style={{ borderColor: "var(--line)" }}>
             <span className="text-xs font-semibold" style={{ color: "var(--muted)" }}>
               {trips.length} {trips.length === 1 ? "trip" : "trips"} {user ? "synced" : "saved locally"}
             </span>
-            <span className="rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+            <Badge variant="secondary" className="rounded-md bg-[var(--sand)] px-2 py-1 text-[11px] font-semibold text-[var(--ink)]">
               Drafts
-            </span>
+            </Badge>
           </div>
 
           <div className="mt-3 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-250px)]">
             {!tripsReady && (
-              <div className="space-y-2 animate-pulse">
+              <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="rounded-lg border p-3" style={{ borderColor: "var(--line)", background: "rgba(255,255,255,0.72)" }}>
+                  <Card key={i} size="sm" className="border bg-white/75 shadow-none" style={{ borderColor: "var(--line)" }}>
                     <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-md shrink-0" style={{ background: "var(--linen)" }} />
+                      <Skeleton className="h-8 w-8 shrink-0 rounded-md bg-[var(--linen)]" />
                       <div className="flex-1 space-y-2 pt-0.5">
-                        <div className="h-3.5 w-3/4 rounded-full" style={{ background: "var(--linen)" }} />
-                        <div className="h-3 w-1/2 rounded-full" style={{ background: "var(--linen)" }} />
+                        <Skeleton className="h-3.5 w-3/4 rounded-full bg-[var(--linen)]" />
+                        <Skeleton className="h-3 w-1/2 rounded-full bg-[var(--linen)]" />
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             )}
@@ -746,61 +796,105 @@ export default function PlannerPage() {
             </div>
           ) : (
             <>
-              <section
-                className="rounded-lg border bg-white p-4 sm:p-5"
+              <Card
+                className="gap-0 rounded-lg border bg-white py-0"
                 style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
               >
+                <CardHeader className="px-4 py-4 sm:px-5">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-                      <button
-                        type="button"
-                        onClick={() => setMobileTab("trips")}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-white px-2.5 transition hover:bg-stone-50 lg:hidden"
-                        style={{ borderColor: "var(--line)", color: "var(--ink)" }}
-                      >
-                        <Icon name="chevron" className="h-3.5 w-3.5 rotate-90" />
-                        Trips
-                      </button>
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-                        <Icon name="route" className="h-4 w-4" />
+                      <Sheet open={tripSheetOpen} onOpenChange={setTripSheetOpen}>
+                        <SheetTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 bg-white lg:hidden">
+                            <Icon name="chevron" className="h-3.5 w-3.5 rotate-90" />
+                            Trips
+                          </Button>
+                        </SheetTrigger>
+                        <SheetContent side="left" className="w-[88vw] max-w-sm gap-0 bg-white p-0">
+                          <SheetHeader className="border-b" style={{ borderColor: "var(--line)" }}>
+                            <SheetTitle>Saved trips</SheetTitle>
+                            <SheetDescription>Open a route, dates, packing, and notes.</SheetDescription>
+                          </SheetHeader>
+                          <div className="flex-1 overflow-y-auto p-3">
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                newTrip();
+                                setTripSheetOpen(false);
+                              }}
+                              className="mb-3 w-full bg-[var(--ink)] text-white hover:bg-[var(--ink)]/90"
+                            >
+                              <Icon name="plus" className="h-4 w-4" />
+                              New trip
+                            </Button>
+                            <div className="space-y-2">
+                              {trips.map((trip) => (
+                                <button
+                                  key={trip.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveId(trip.id);
+                                    setMobileTab("plan");
+                                    setTripSheetOpen(false);
+                                  }}
+                                  className="w-full rounded-lg border bg-white p-3 text-left"
+                                  style={{ borderColor: activeId === trip.id ? "var(--accent)" : "var(--line)" }}
+                                >
+                                  <span className="block truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                                    {trip.name || "Untitled trip"}
+                                  </span>
+                                  <span className="mt-1 block text-xs" style={{ color: "var(--muted)" }}>
+                                    {dateSummary(trip)} · {stopSummary(trip.stops.length)}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </SheetContent>
+                      </Sheet>
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[#e4f1ed] text-lg">
+                        🏔️
                       </span>
                       Trip summary
                     </div>
-                    <input
+                    <Input
                       type="text"
                       value={activeTrip.name}
                       onChange={(e) => updateTrip({ ...activeTrip, name: e.target.value })}
-                      className="mt-3 w-full border-none p-0 text-3xl font-semibold leading-tight outline-none md:text-4xl"
+                      className="mt-2 h-auto w-full border-none bg-transparent p-0 text-3xl font-semibold leading-tight text-[var(--ink)] shadow-none focus-visible:ring-0 md:text-4xl"
                       style={{ background: "transparent", color: "var(--ink)" }}
                       placeholder="Trip name"
                     />
-                    <div className="mt-4 flex flex-wrap gap-2 text-sm">
-                      <span className="inline-flex items-center gap-2 rounded-md border bg-[var(--surface)] px-3 py-2" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
+                    <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                      <Badge variant="outline" className="h-8 gap-2 rounded-md border-[#d8ddd8] bg-[#fbfbf8] px-3 text-[var(--muted-strong)]">
                         <Icon name="calendar" className="h-4 w-4" />
                         {dateSummary(activeTrip)}
-                      </span>
-                      <span className="inline-flex items-center gap-2 rounded-md border bg-[var(--surface)] px-3 py-2" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
+                      </Badge>
+                      <Badge variant="outline" className="h-8 gap-2 rounded-md border-[#d7e2dc] bg-[#f1f7f3] px-3 text-[#356b5a]">
                         <Icon name="map" className="h-4 w-4" />
                         {stopSummary(activeTrip.stops.length)}
-                      </span>
-                      <span className="inline-flex items-center gap-2 rounded-md border bg-[var(--surface)] px-3 py-2" style={{ borderColor: "var(--line)", color: "var(--muted-strong)" }}>
+                      </Badge>
+                      <Badge variant="outline" className="h-8 gap-2 rounded-md border-[#d8ddd8] bg-[#fbfbf8] px-3 text-[var(--muted-strong)]">
                         <Icon name="check" className="h-4 w-4" />
-                        0 of {packingList.length} packed
-                      </span>
-                      <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
+                        {packedCount} of {packingList.length} packed
+                      </Badge>
+                      <Badge variant="secondary" className="h-8 rounded-md bg-[#eee5d6] px-3 text-xs font-semibold text-[var(--ink)]">
                         {user ? "Draft" : "Saved locally"}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 xl:justify-end">
-                    <ShareTripButton trip={activeTrip} />
-                    <button
+                  <TooltipProvider>
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:justify-end">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                    <Button
                       type="button"
                       onClick={saveTrip}
                       disabled={saving}
-                      className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5 disabled:opacity-50"
+                      variant="outline"
+                      className="h-10 bg-white font-semibold"
                       style={{
                         color: saveMsg === "saved" ? "var(--accent)" : saveMsg === "error" ? "#b42318" : "var(--ink)",
                         borderColor: saveMsg === "saved" ? "rgba(23,109,101,0.24)" : saveMsg === "error" ? "rgba(180,35,24,0.22)" : "var(--line)",
@@ -809,135 +903,156 @@ export default function PlannerPage() {
                     >
                       <Icon name="check" className="h-4 w-4" />
                       {saving ? "Saving…" : saveMsg === "saved" ? "Saved!" : saveMsg === "error" ? "Error" : "Save"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
-                      style={{ borderColor: "var(--line)", color: "var(--ink)" }}
-                    >
-                      <Icon name="print" className="h-4 w-4" />
-                      Print
-                    </button>
-                    <button
+                    </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Save trip changes</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                    <Button
                       type="button"
                       onClick={() => deleteTrip(activeTrip.id)}
-                      className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
+                      variant="outline"
+                      className="h-10 bg-white font-semibold text-[#9f241b] hover:bg-red-50 hover:text-[#9f241b]"
                       style={{ borderColor: "rgba(180,35,24,0.18)", color: "#9f241b" }}
                     >
                       <Icon name="trash" className="h-4 w-4" />
                       Delete
-                    </button>
+                    </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete this trip</TooltipContent>
+                    </Tooltip>
                   </div>
+                  </TooltipProvider>
                 </div>
+                {saveMsg === "error" && (
+                  <Alert variant="destructive" className="mt-4 border-red-200 bg-red-50">
+                    <AlertTitle>Trip was not saved</AlertTitle>
+                    <AlertDescription>Try saving again. Your edits are still on this page.</AlertDescription>
+                  </Alert>
+                )}
+                </CardHeader>
 
-                <div className="mt-4 grid gap-3 border-t pt-4 md:grid-cols-2" style={{ borderColor: "var(--line)" }}>
-                  <label>
-                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
-                      <Icon name="calendar" className="h-4 w-4" />
-                      Start date
-                    </span>
-                    <input
-                      type="date"
-                      value={activeTrip.startDate}
-                      onChange={(e) => updateTrip({ ...activeTrip, startDate: e.target.value })}
-                      className="mt-2 w-full rounded-lg border px-3 py-2.5 text-sm font-semibold outline-none"
-                      style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
-                    />
-                  </label>
-                  <label>
-                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
-                      <Icon name="calendar" className="h-4 w-4" />
-                      End date
-                    </span>
-                    <input
-                      type="date"
-                      value={activeTrip.endDate}
-                      onChange={(e) => updateTrip({ ...activeTrip, endDate: e.target.value })}
-                      className="mt-2 w-full rounded-lg border px-3 py-2.5 text-sm font-semibold outline-none"
-                      style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
-                    />
-                  </label>
-                </div>
-              </section>
+                <Separator className="bg-[var(--line)]" />
+                <CardContent className="grid max-w-[720px] gap-3 px-4 py-4 sm:px-5 md:grid-cols-2">
+                  <TripDatePicker
+                    label="Start date"
+                    value={activeTrip.startDate}
+                    onChange={(value) => updateTrip({ ...activeTrip, startDate: value })}
+                  />
+                  <TripDatePicker
+                    label="End date"
+                    value={activeTrip.endDate}
+                    onChange={(value) => updateTrip({ ...activeTrip, endDate: value })}
+                  />
+                </CardContent>
+              </Card>
 
               <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_370px]">
                 <section className="min-w-0 space-y-4">
-                  <div className="rounded-lg border bg-white p-4 sm:p-5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-                          Itinerary
-                        </p>
-                        <div className="mt-1 flex flex-wrap items-center gap-3">
-                          <h2 className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-                            Route builder
-                          </h2>
-                          {aiError && (
-                            <span className="text-xs font-medium text-red-500">{aiError}</span>
+                  <Card className={`${mobileTab === "plan" ? "block" : "hidden"} gap-0 overflow-visible rounded-lg border bg-white py-0 xl:block`} style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                    <CardHeader className="px-4 py-4 sm:px-5">
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-start">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                            Itinerary
+                          </p>
+                          <Badge variant="outline" className="rounded-md border-[#d9d2c3] bg-[#f7f1e7] text-[#6e5b39]">
+                            {activeTrip.stops.length} {activeTrip.stops.length === 1 ? "stop" : "stops"}
+                          </Badge>
+                          {tripDays > 0 && (
+                            <Badge variant="outline" className="rounded-md border-[#d7e2dc] bg-[#f1f7f3] text-[#356b5a]">
+                              {tripDays} {tripDays === 1 ? "day" : "days"}
+                            </Badge>
                           )}
                         </div>
+                        <CardTitle className="mt-1 text-2xl font-semibold text-[var(--ink)]">
+                          Route builder
+                        </CardTitle>
                       </div>
-                      <div className="relative w-full lg:max-w-sm">
-                        <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          placeholder="Search Yosemite, Zion, campgrounds, viewpoints..."
-                          value={parkSearch}
-                          onChange={(e) => setParkSearch(e.target.value)}
-                          className="w-full rounded-lg border py-3 pl-10 pr-3 text-sm font-medium outline-none"
-                          style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
-                        />
-                        {(parkResults.length > 0 || searching) && (
-                          <div
-                            className="absolute left-0 right-0 top-full z-20 mt-2 max-h-80 overflow-y-auto rounded-lg border bg-white"
-                            style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-card-hover)" }}
-                          >
-                            {searching && (
-                              <p className="px-4 py-3 text-sm" style={{ color: "var(--muted)" }}>
-                                Searching...
-                              </p>
-                            )}
-                            {parkResults.map((park) => (
-                              <button
-                                key={park.parkCode}
-                                type="button"
-                                onClick={() => addStop(park)}
-                                className="flex w-full items-center gap-3 border-t px-4 py-3 text-left text-sm transition-colors hover:bg-stone-50"
-                                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
-                              >
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate font-semibold">{park.fullName}</span>
-                                  <span className="mt-0.5 block text-xs" style={{ color: "var(--muted)" }}>
-                                    {park.states || "National Park Service"}
-                                  </span>
-                                </span>
-                                <span
-                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-                                  style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-                                >
-                                  <Icon name="plus" className="h-4 w-4" />
-                                </span>
-                              </button>
-                            ))}
+                      <Popover open={Boolean(parkSearch.trim())}>
+                        <PopoverAnchor asChild>
+                          <div className="relative w-full">
+                            <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
+                            <Input
+                              type="text"
+                              placeholder="Add a park stop..."
+                              value={parkSearch}
+                              onChange={(e) => setParkSearch(e.target.value)}
+                              className="h-11 rounded-lg border-[#d8ddd8] bg-[#fbfbf8] pl-10 pr-3 text-sm font-medium text-[var(--ink)]"
+                            />
                           </div>
-                        )}
-                      </div>
+                        </PopoverAnchor>
+                        <PopoverContent
+                          align="end"
+                          onOpenAutoFocus={(event) => event.preventDefault()}
+                          className="w-[min(92vw,30rem)] overflow-hidden rounded-lg border bg-white p-0"
+                          style={{ borderColor: "var(--line)" }}
+                        >
+                          <Command shouldFilter={false} className="rounded-lg bg-white">
+                            <CommandList>
+                              {searching && (
+                                <div className="space-y-2 p-3">
+                                  {[1, 2, 3].map((item) => (
+                                    <div key={item} className="flex items-center gap-3">
+                                      <Skeleton className="h-9 w-9 rounded-md bg-[var(--linen)]" />
+                                      <div className="flex-1 space-y-2">
+                                        <Skeleton className="h-3.5 w-3/4 bg-[var(--linen)]" />
+                                        <Skeleton className="h-3 w-1/3 bg-[var(--linen)]" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {!searching && parkResults.length === 0 && <CommandEmpty>No parks found.</CommandEmpty>}
+                              <CommandGroup heading="Add a stop">
+                                {parkResults.map((park) => (
+                                  <CommandItem
+                                    key={park.parkCode}
+                                    value={park.fullName}
+                                    onSelect={() => addStop(park)}
+                                    className="cursor-pointer rounded-md px-3 py-3"
+                                  >
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#edf5ef] text-[#1f7668]">
+                                      <Icon name="plus" className="h-4 w-4" />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block truncate font-semibold">{park.fullName}</span>
+                                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                                        {park.states || "National Park Service"}
+                                      </span>
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
-
-                    <div className="mt-4 flex flex-col gap-3 rounded-lg border bg-[var(--surface)] p-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--line)" }}>
+                    {aiError && (
+                      <Alert variant="destructive" className="mt-4 border-red-200 bg-red-50">
+                        <AlertTitle>Could not draft itinerary</AlertTitle>
+                        <AlertDescription>{aiError}</AlertDescription>
+                      </Alert>
+                    )}
+                    </CardHeader>
+                    <Separator className="bg-[var(--line)]" />
+                    <CardContent className="px-4 py-4 sm:px-5">
+                    <div className="flex flex-col gap-3 rounded-lg border bg-[#fbfaf6] p-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--line)" }}>
                       <div>
-                        <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Need a starting route?</p>
+                        <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Draft from your stops</p>
                         <p className="mt-0.5 text-xs leading-5" style={{ color: "var(--muted)" }}>
-                          Uses your dates, stops, and packing needs.
+                          Uses dates, stops, and packing context.
                         </p>
                       </div>
-                      <button
+                      <Button
                         type="button"
                         onClick={() => void generateItinerary()}
                         disabled={aiLoading || !activeTrip.stops.length}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45"
-                        style={{ background: "var(--accent)" }}
+                        variant={activeTrip.stops.length ? "default" : "outline"}
+                        className={activeTrip.stops.length ? "h-10 bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90" : "h-10 bg-white text-[var(--muted)]"}
                         title={!activeTrip.stops.length ? "Add at least one park stop first" : "Draft itinerary"}
                       >
                         {aiLoading ? (
@@ -946,51 +1061,47 @@ export default function PlannerPage() {
                           <Icon name="route" className="h-4 w-4" />
                         )}
                         {aiLoading ? "Drafting..." : "Draft itinerary"}
-                      </button>
+                      </Button>
                     </div>
 
                     {activeTrip.stops.length === 0 ? (
-                      <div className="mt-5 rounded-lg border bg-[var(--surface)] p-4" style={{ borderColor: "var(--line)" }}>
-                        <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(280px,0.7fr)]">
+                      <div className="mt-4 rounded-lg border bg-[var(--surface)] p-4" style={{ borderColor: "var(--line)" }}>
+                        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(260px,0.58fr)]">
                           <div>
-                            <p className="text-lg font-semibold" style={{ color: "var(--ink)" }}>
+                            <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>
                               Start with the first park or stop.
                             </p>
                             <p className="mt-2 max-w-xl text-sm leading-6" style={{ color: "var(--muted)" }}>
                               Search for a park, add your first stop, then build the days around drive time, permits, and weather.
                             </p>
                             <div className="mt-4 flex flex-wrap gap-2">
-                              <button
+                              <Button
                                 type="button"
                                 onClick={() => setParkSearch("Yosemite")}
-                                className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
-                                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                                variant="outline"
+                                className="h-10 bg-white"
                               >
                                 Search parks
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 type="button"
-                                onClick={() => setParkSearch("Yosemite")}
-                                className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
-                                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                                onClick={() => setParkSearch("Zion")}
+                                variant="outline"
+                                className="h-10 bg-white"
                               >
-                                Add Yosemite
-                              </button>
-                              <button
+                                Try Zion
+                              </Button>
+                              <Button
                                 type="button"
                                 disabled
-                                className="rounded-lg border px-3 py-2 text-sm font-semibold opacity-45"
-                                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+                                variant="outline"
+                                className="h-10 bg-white"
                               >
                                 Generate with AI
-                              </button>
-                              <Link
-                                href="/explore"
-                                className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
-                                style={{ borderColor: "var(--line)", color: "var(--accent)" }}
-                              >
-                                Browse nearby parks
-                              </Link>
+                              </Button>
+                              <Button asChild variant="outline" className="h-10 bg-white text-[var(--accent)]">
+                                <Link href="/explore">Browse parks</Link>
+                              </Button>
                             </div>
                             <div className="mt-5 rounded-lg border bg-white p-3" style={{ borderColor: "var(--line)" }}>
                               <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
@@ -1041,53 +1152,56 @@ export default function PlannerPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="relative mt-5 space-y-3">
-                        <div className="absolute bottom-8 left-5 top-8 w-px bg-stone-200" />
+                      <div className="relative mt-4 space-y-3">
+                        <div className="absolute bottom-8 left-[1.25rem] top-8 hidden w-px bg-[#d7d1c4] sm:block" />
+                        <TooltipProvider>
                         {activeTrip.stops.map((stop, i) => (
-                          <div key={stop.id} className="relative flex items-start gap-3 rounded-lg border bg-white p-4 pr-14 sm:grid sm:grid-cols-[44px_minmax(0,1fr)_auto] sm:pr-4" style={{ borderColor: "var(--line)", boxShadow: "0 10px 28px rgba(17,19,21,0.04)" }}>
+                          <Card key={stop.id} className="relative gap-0 overflow-visible rounded-lg border bg-white py-0" style={{ borderColor: "var(--line)", boxShadow: "0 10px 28px rgba(17,19,21,0.04)" }}>
+                            <CardContent className="grid gap-3 p-3 sm:grid-cols-[44px_minmax(0,1fr)_auto] sm:p-4">
                             <div
-                              className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
-                              style={{ background: i === 0 ? "var(--accent)" : "var(--ink)" }}
+                              className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white"
+                              style={{ background: i === 0 ? "var(--accent)" : "#2f3a34" }}
                             >
                               {i + 1}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 pr-10 sm:pr-0">
                                 <Link
                                   href={`/parks/${stop.parkCode}`}
-                                  className="truncate text-base font-semibold transition hover:opacity-70"
+                                  className="min-w-0 truncate text-base font-semibold transition hover:opacity-70"
                                   style={{ color: "var(--ink)" }}
                                 >
                                   {stop.parkName}
                                 </Link>
-                                <label
-                                  className="inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold"
-                                  style={{ background: "var(--surface-soft)", color: "var(--muted-strong)" }}
-                                >
+                                <Badge variant="outline" className="gap-1 rounded-md border-[#d9d2c3] bg-[#f7f1e7] px-2 py-1 text-xs font-semibold text-[#6e5b39]">
                                   Day
                                   <input
+                                    aria-label={`Day for ${stop.parkName}`}
                                     type="number"
                                     min={1}
                                     value={stop.day}
                                     onChange={(e) => updateStop(stop.id, { day: Math.max(1, Number(e.target.value) || 1) })}
-                                    className="w-10 border-none p-0 text-xs font-semibold outline-none"
-                                    style={{ background: "transparent", color: "var(--ink)" }}
+                                    className="h-4 w-8 border-none bg-transparent p-0 text-xs font-semibold outline-none"
+                                    style={{ color: "var(--ink)" }}
                                   />
-                                </label>
+                                </Badge>
+                                <Badge variant="outline" className="rounded-md border-[#d7e2dc] bg-[#f1f7f3] text-[#356b5a]">
+                                  Planned
+                                </Badge>
                               </div>
+                              <Separator className="mt-3 bg-[var(--line)]" />
                               {editingStopId === stop.id || !stop.notes ? (
-                                <textarea
+                                <Textarea
                                   autoFocus={editingStopId === stop.id}
                                   placeholder="Trail ideas, arrival time, campsite..."
                                   value={stop.notes}
                                   rows={3}
                                   onChange={(e) => updateStop(stop.id, { notes: e.target.value })}
                                   onBlur={() => setEditingStopId(null)}
-                                  className="mt-2 w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none leading-6"
-                                  style={{ borderColor: "var(--accent)", color: "var(--ink-soft)", background: "rgba(251,251,248,0.74)" }}
+                                  className="mt-3 min-h-24 w-full resize-none rounded-lg border-[#cfded7] bg-[#fbfbf8] px-3 py-2 text-sm leading-6 text-[var(--ink-soft)]"
                                 />
                               ) : (
-                                <div className="mt-2 rounded-lg border px-3 py-2.5 cursor-text" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.74)" }} onClick={() => setEditingStopId(stop.id)}>
+                                <div className="mt-3 cursor-text rounded-lg border bg-[#fbfbf8] px-3 py-2.5" style={{ borderColor: "var(--line)" }} onClick={() => setEditingStopId(stop.id)}>
                                   {(() => {
                                     const [activitiesPart, tip] = stop.notes.split(" — ");
                                     const activities = activitiesPart.split(" · ").map(s => s.trim()).filter(Boolean);
@@ -1096,15 +1210,17 @@ export default function PlannerPage() {
                                       return <p className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>{stop.notes}</p>;
                                     }
                                     return (
-                                      <div className="space-y-1.5">
-                                        {activities.map((act, ai) => (
-                                          <div key={ai} className="flex items-start gap-2">
-                                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
-                                            <span className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>{act}</span>
-                                          </div>
-                                        ))}
+                                      <div className="space-y-2">
+                                        <div className="space-y-1.5">
+                                          {activities.map((act, ai) => (
+                                            <div key={ai} className="flex items-start gap-2">
+                                              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#1f7668]" />
+                                              <span className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>{act}</span>
+                                            </div>
+                                          ))}
+                                        </div>
                                         {tip && (
-                                          <p className="mt-1 rounded-md px-2.5 py-1.5 text-xs leading-5" style={{ background: "rgba(23,109,101,0.07)", color: "var(--accent)" }}>
+                                          <p className="rounded-md bg-[#eaf3ed] px-3 py-2 text-xs leading-5 text-[#1f7668]">
                                             Tip: {tip}
                                           </p>
                                         )}
@@ -1114,21 +1230,29 @@ export default function PlannerPage() {
                                 </div>
                               )}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => removeStop(stop.id)}
-                              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-red-50 sm:static"
-                              style={{ color: "var(--muted)" }}
-                              aria-label={`Remove ${stop.parkName}`}
-                              title="Remove stop"
-                            >
-                              <Icon name="close" className="h-4 w-4" />
-                            </button>
-                          </div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  onClick={() => removeStop(stop.id)}
+                                  variant="ghost"
+                                  size="icon-lg"
+                                  className="absolute right-3 top-3 h-10 w-10 text-[var(--muted)] hover:bg-red-50 hover:text-red-700 sm:static"
+                                  aria-label={`Remove ${stop.parkName}`}
+                                >
+                                  <Icon name="close" className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Remove stop</TooltipContent>
+                            </Tooltip>
+                            </CardContent>
+                          </Card>
                         ))}
+                        </TooltipProvider>
                       </div>
                     )}
-                  </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Route map — only shown when stops have coordinates */}
                   {(() => {
@@ -1137,9 +1261,27 @@ export default function PlannerPage() {
                         typeof s.lat === "number" && typeof s.lng === "number"
                       )
                       .map((s) => ({ id: s.id, parkName: s.parkName, day: s.day, notes: s.notes, lat: s.lat, lng: s.lng }));
-                    if (mapped.length === 0) return null;
+                    if (mapped.length === 0) {
+                      return (
+                        <Card className={`${mobileTab === "map" ? "block" : "hidden"} border bg-white xl:hidden`} style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                          <CardHeader>
+                            <CardTitle className="text-[var(--ink)]">Map appears after you add a park stop</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm leading-6" style={{ color: "var(--muted)" }}>
+                              Add a park with location data from the Plan tab to see the route map here.
+                            </p>
+                          </CardContent>
+                          <CardFooter className="bg-[var(--surface)]">
+                            <Button type="button" onClick={() => setMobileTab("plan")} className="w-full bg-[var(--ink)] text-white hover:bg-[var(--ink)]/90">
+                              Add first stop
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      );
+                    }
                     return (
-                      <section className="rounded-lg border bg-white overflow-hidden" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                      <section className={`${mobileTab === "map" ? "block" : "hidden"} overflow-hidden rounded-lg border bg-white xl:block`} style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                         <div className="flex items-center gap-2 px-5 py-4 border-b" style={{ borderColor: "var(--line)" }}>
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15"/><path d="M15 6v15"/>
@@ -1153,59 +1295,52 @@ export default function PlannerPage() {
                   })()}
                 </section>
 
-                <aside className="space-y-4 xl:sticky xl:top-[82px] xl:self-start">
-                  <div className="overflow-hidden rounded-lg border bg-white" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between gap-4 p-4 text-left"
-                      onClick={() => setShowChecklist((s) => !s)}
-                    >
-                      <span>
-                        <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-                          <Icon name="check" className="h-4 w-4" />
-                          Packing
-                        </span>
-                        <span className="mt-1 block text-xl font-semibold" style={{ color: "var(--ink)" }}>
-                          Review before you leave
-                        </span>
-                        <span className="mt-1 block text-xs" style={{ color: "var(--muted)" }}>
-                          0 of {packingList.length} packed
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <span className="rounded-md px-2.5 py-1 text-xs font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-                          {packingList.length} items
-                        </span>
-                        <Icon
-                          name="chevron"
-                          className={`h-4 w-4 transition ${showChecklist ? "rotate-180" : ""}`}
-                        />
-                      </span>
-                    </button>
-                    {showChecklist && (
-                      <div className="max-h-[420px] overflow-y-auto border-t p-4" style={{ borderColor: "var(--line)" }}>
-                        <div className="space-y-4">
-                          {groupPackingItems(packingList).map(([category, items]) => (
-                            <div key={category}>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
-                                {category}
-                              </p>
-                              <div className="mt-2 space-y-1">
-                                {items.map((item) => (
-                                  <label key={item} className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-stone-50">
-                                    <input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-teal-700" />
-                                    <span className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>
-                                      {item}
-                                    </span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
+                <aside className={`${mobileTab === "notes" ? "block" : "hidden"} space-y-4 xl:sticky xl:top-[82px] xl:block xl:self-start`}>
+                  <Card className="gap-0 overflow-hidden border bg-white py-0" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                    <CardHeader className="px-4 py-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                            <Icon name="check" className="h-4 w-4" />
+                            Packing
+                          </p>
+                          <CardTitle className="mt-1 text-xl text-[var(--ink)]">Review before you leave</CardTitle>
+                          <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                            {packedCount} of {packingList.length} packed
+                          </p>
                         </div>
+                        <Badge variant="outline" className="rounded-md border-[var(--line)] bg-[var(--accent-soft)] text-[var(--accent)]">
+                          {packingList.length} items
+                        </Badge>
                       </div>
-                    )}
-                  </div>
+                    </CardHeader>
+                    <Separator className="bg-[var(--line)]" />
+                    <CardContent className="max-h-[420px] overflow-y-auto px-4 py-2">
+                      <Accordion type="multiple" defaultValue={showChecklist ? groupPackingItems(packingList).map(([category]) => category) : []} onValueChange={(items) => setShowChecklist(items.length > 0)}>
+                        {groupPackingItems(packingList).map(([category, items]) => (
+                          <AccordionItem key={category} value={category} className="border-[var(--line)]">
+                            <AccordionTrigger className="py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)] hover:no-underline">
+                              {category}
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-1 pb-3">
+                              {items.map((item) => (
+                                <label key={item} className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-stone-50">
+                                  <Checkbox
+                                    checked={packedItems.includes(item)}
+                                    onCheckedChange={(checked) => togglePackedItem(item, checked === true)}
+                                    className="mt-1 border-[var(--line)] data-checked:border-[var(--accent)] data-checked:bg-[var(--accent)]"
+                                  />
+                                  <span className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>
+                                    {item}
+                                  </span>
+                                </label>
+                              ))}
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    </CardContent>
+                  </Card>
 
                   <div className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                     <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
@@ -1215,12 +1350,12 @@ export default function PlannerPage() {
                     <h3 className="mt-1 text-2xl font-semibold" style={{ color: "var(--ink)" }}>
                       Trip notes
                     </h3>
-                    <textarea
+                    <Textarea
                       value={activeTrip.notes}
                       onChange={(e) => updateTrip({ ...activeTrip, notes: e.target.value })}
                       placeholder="Reservations, permit numbers, route reminders..."
                       rows={8}
-                      className="mt-4 w-full resize-none rounded-lg border px-3 py-3 text-sm leading-6 outline-none"
+                      className="mt-4 min-h-48 w-full resize-none rounded-lg border-[var(--line)] bg-white px-3 py-3 text-sm leading-6 text-[var(--ink)]"
                       style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
                     />
                   </div>
@@ -1231,40 +1366,23 @@ export default function PlannerPage() {
         </main>
       </div>
 
-      {/* AI Itinerary Modal */}
-      {aiResult && (
-        <div
-          className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-4"
-          style={{ background: "rgba(17,19,21,0.6)", backdropFilter: "blur(6px)" }}
-          onClick={() => setAiResult(null)}
-        >
-          <div
-            className="w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl flex flex-col"
-            style={{ background: "white", boxShadow: "0 32px 80px rgba(17,19,21,0.24)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
+      <Dialog open={Boolean(aiResult)} onOpenChange={(open) => !open && setAiResult(null)}>
+        {aiResult && (
+          <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden rounded-xl bg-white p-0 sm:max-w-2xl" style={{ boxShadow: "0 32px 80px rgba(17,19,21,0.24)" }}>
             {/* Header */}
-            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b" style={{ borderColor: "var(--line)" }}>
+            <DialogHeader className="border-b px-6 py-5 pr-14" style={{ borderColor: "var(--line)" }}>
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>AI Generated</p>
                 </div>
-                <h3 className="text-xl font-semibold" style={{ color: "var(--ink)" }}>Your Itinerary</h3>
-                <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>{aiResult.summary}</p>
+                <DialogTitle className="text-xl font-semibold" style={{ color: "var(--ink)" }}>Your Itinerary</DialogTitle>
+                <DialogDescription className="mt-1 text-sm" style={{ color: "var(--muted)" }}>{aiResult.summary}</DialogDescription>
               </div>
-              <button
-                type="button"
-                onClick={() => setAiResult(null)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition hover:bg-stone-100"
-                style={{ color: "var(--muted)" }}
-              >
-                <Icon name="close" className="h-4 w-4" />
-              </button>
-            </div>
+            </DialogHeader>
 
             {/* Days */}
-            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+            <div className="max-h-[56vh] overflow-y-auto px-6 py-4 space-y-3">
               {aiResult.days.map((day) => (
                 <div key={day.day} className="rounded-xl border p-4" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.7)" }}>
                   <div className="flex items-center gap-3 mb-3">
@@ -1310,73 +1428,70 @@ export default function PlannerPage() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between gap-3 border-t px-6 py-4" style={{ borderColor: "var(--line)" }}>
-              <button
+            <DialogFooter className="mx-0 mb-0 flex-row items-center justify-between gap-3 rounded-none border-t bg-white px-6 py-4" style={{ borderColor: "var(--line)" }}>
+              <Button
                 type="button"
                 onClick={() => setAiResult(null)}
-                className="px-4 py-2.5 rounded-lg text-sm font-semibold transition hover:bg-stone-100"
-                style={{ color: "var(--muted)" }}
+                variant="ghost"
+                className="text-[var(--muted)]"
               >
                 Discard
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={applyItinerary}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
-                style={{ background: "var(--ink)", boxShadow: "0 8px 24px rgba(17,19,21,0.16)" }}
+                className="bg-[var(--ink)] text-white shadow-[0_8px_24px_rgba(17,19,21,0.16)] hover:bg-[var(--ink)]/90"
               >
                 <Icon name="check" className="h-4 w-4" />
                 Apply to planner
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }
 
-function ShareTripButton({ trip }: { trip: Trip }) {
-  const { user } = useAuth();
-  const [state, setState] = useState<"idle" | "working" | "copied">("idle");
-
-  const handleShare = async () => {
-    if (state !== "idle") return;
-    setState("working");
-    try {
-      let url: string;
-      if (user) {
-        // Make trip public in Supabase and share a clean /trips/{id} URL
-        await supabase.from("trips").update({ is_public: true }).eq("id", trip.id).eq("user_id", user.id);
-        url = `${window.location.origin}/trips/${trip.id}`;
-      } else {
-        // Guest fallback: encode trip data in URL
-        const payload = btoa(encodeURIComponent(JSON.stringify(trip)));
-        url = `${window.location.origin}/planner?trip=${payload}`;
-      }
-      await navigator.clipboard.writeText(url);
-      setState("copied");
-      setTimeout(() => setState("idle"), 2500);
-    } catch {
-      setState("idle");
-    }
-  };
+function TripDatePicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const selected = parseInputDate(value) ?? undefined;
 
   return (
-    <button
-      type="button"
-      onClick={() => void handleShare()}
-      disabled={state === "working"}
-      className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5 disabled:opacity-50"
-      style={{
-        color: state === "copied" ? "var(--accent)" : "var(--ink)",
-        borderColor: state === "copied" ? "rgba(23,109,101,0.24)" : "var(--line)",
-        background: state === "copied" ? "var(--accent-soft)" : "white",
-      }}
-    >
-      <Icon name="share" className="h-4 w-4" />
-      {state === "working" ? "…" : state === "copied" ? "Copied!" : "Share"}
-    </button>
+    <div>
+      <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+        <Icon name="calendar" className="h-4 w-4" />
+        {label}
+      </span>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-2 h-10 w-full justify-between rounded-lg border-[#d8ddd8] bg-[#fbfbf8] px-3 text-left text-sm font-semibold text-[var(--ink)] hover:bg-[#f3f8f5]"
+          >
+            <span>{value ? formatDate(value) : "Select date"}</span>
+            <Icon name="calendar" className="h-4 w-4 text-[var(--muted)]" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-auto rounded-lg border bg-white p-0" style={{ borderColor: "var(--line)" }}>
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(date) => {
+              if (date) onChange(formatInputDate(date));
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 

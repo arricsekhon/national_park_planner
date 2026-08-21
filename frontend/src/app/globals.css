@@ -335,6 +335,12 @@ input:focus, textarea:focus, select:focus, button:focus-visible, a:focus-visible
   margin-inline: auto;
 }
 
+@media (max-width: 639px) {
+  .app-shell {
+    width: min(100% - 24px, 1760px);
+  }
+}
+
 .app-panel {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(17, 19, 21, 0.08);

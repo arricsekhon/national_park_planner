@@ -259,9 +259,9 @@ function ExploreContent() {
   };
   return (
     <div className="min-h-screen pt-[var(--nav-h)]" style={{ background: "var(--surface)" }}>
-      <div className="app-shell flex min-h-[calc(100vh-66px)] flex-col py-4 sm:py-5">
+      <div className="app-shell flex min-h-[calc(100vh-66px)] flex-col py-3 sm:py-5">
         <section
-          className="app-panel relative z-20 mb-4 overflow-hidden rounded-lg p-4"
+          className="app-panel relative z-20 mb-3 overflow-hidden rounded-lg p-3.5 sm:mb-4 sm:p-4"
         >
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
@@ -269,7 +269,7 @@ function ExploreContent() {
               <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
                 Explore
               </p>
-              <h1 className="text-2xl font-semibold sm:text-3xl" style={{ color: "var(--ink)" }}>
+              <h1 className="text-[1.65rem] font-semibold leading-tight sm:text-3xl" style={{ color: "var(--ink)" }}>
                 Find a park that fits your trip.
               </h1>
               <p className="mt-1.5 hidden max-w-xl text-sm leading-6 sm:block" style={{ color: "var(--muted)" }}>
@@ -315,7 +315,7 @@ function ExploreContent() {
             </div>
 
             {/* On mobile, detailed filters live in the sheet. On larger screens, state stays inline. */}
-            <div className="flex gap-2.5 lg:contents">
+            <div className="grid grid-cols-2 gap-2.5 sm:flex lg:contents">
               <select
                 value={stateCode}
                 onChange={(e) => setStateCode(e.target.value)}
@@ -329,7 +329,7 @@ function ExploreContent() {
 
               <button
                 type="submit"
-                className="min-h-11 flex-1 rounded-lg px-5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] sm:flex-none sm:px-7"
+                className="min-h-11 rounded-lg px-5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] sm:flex-none sm:px-7"
                 style={{ background: "var(--ink)" }}
               >
                 Search
@@ -338,7 +338,7 @@ function ExploreContent() {
               <button
                 type="button"
                 onClick={() => setFilterSheetOpen(true)}
-                className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border px-5 text-sm font-semibold transition active:scale-[0.98] sm:hidden"
+                className="flex min-h-11 items-center justify-center gap-2 rounded-lg border px-5 text-sm font-semibold transition active:scale-[0.98] sm:hidden"
                 style={{ background: "rgba(255,255,255,0.78)", borderColor: "var(--line)", color: "var(--ink)" }}
                 aria-haspopup="dialog"
                 aria-expanded={filterSheetOpen}
@@ -359,8 +359,8 @@ function ExploreContent() {
           </form>
 
           <div className="mt-3 flex flex-col gap-2 sm:gap-3">
-            <div className="relative">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 pr-10 [scrollbar-width:none] sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pr-0 [&::-webkit-scrollbar]:hidden">
+            <div className="relative -mx-3.5 sm:mx-0">
+            <div className="flex gap-1.5 overflow-x-auto px-3.5 pb-1 pr-10 [scrollbar-width:none] sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pr-0 [&::-webkit-scrollbar]:hidden">
               {/* Near me chip */}
               <button
                 type="button"
@@ -465,7 +465,7 @@ function ExploreContent() {
               aria-label="Close filters"
             />
             <div
-              className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-[1.75rem] border px-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-6 shadow-2xl"
+              className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-2xl border px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-5 shadow-2xl"
               style={{ background: "var(--surface)", borderColor: "rgba(255,255,255,0.82)" }}
             >
               <div className="mb-4 flex items-center justify-between gap-4">
@@ -490,7 +490,7 @@ function ExploreContent() {
                   <select
                     value={stateCode}
                     onChange={(e) => setStateCode(e.target.value)}
-                    className="min-h-16 w-full rounded-full border px-7 text-base font-medium"
+                    className="min-h-12 w-full rounded-lg border px-4 text-base font-medium"
                     style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
                     {US_STATES.map(([code, name]) => (
@@ -504,7 +504,7 @@ function ExploreContent() {
                   <select
                     value={activityFilter}
                     onChange={(e) => setActivityFilter(e.target.value)}
-                    className="min-h-16 w-full rounded-full border px-7 text-base font-medium"
+                    className="min-h-12 w-full rounded-lg border px-4 text-base font-medium"
                     style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
                     <option value="">All activities</option>
@@ -517,7 +517,7 @@ function ExploreContent() {
                 <button
                   type="button"
                   onClick={() => setNpOnly((value) => !value)}
-                  className="flex min-h-14 items-center justify-between rounded-full border px-7 text-left text-base font-medium"
+                  className="flex min-h-12 items-center justify-between rounded-lg border px-4 text-left text-base font-medium"
                   style={{
                     background: npOnly ? "rgba(169,111,45,0.12)" : "white",
                     borderColor: npOnly ? "rgba(169,111,45,0.32)" : "var(--line)",
@@ -547,7 +547,7 @@ function ExploreContent() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="min-h-12 rounded-full border px-4 text-sm font-semibold"
+                  className="min-h-11 rounded-lg border px-4 text-sm font-semibold"
                   style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                 >
                   Reset
@@ -555,7 +555,7 @@ function ExploreContent() {
                 <button
                   type="button"
                   onClick={() => setFilterSheetOpen(false)}
-                  className="min-h-12 rounded-full px-4 text-sm font-semibold text-white"
+                  className="min-h-11 rounded-lg px-4 text-sm font-semibold text-white"
                   style={{ background: "var(--ink)" }}
                 >
                   Apply
@@ -592,7 +592,7 @@ function ExploreContent() {
           <div
             className="app-panel flex min-h-[580px] min-w-0 flex-col overflow-hidden rounded-lg"
           >
-            <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--line)" }}>
+            <div className="flex flex-col gap-3 border-b px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4" style={{ borderColor: "var(--line)" }}>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
                   {npOnly ? "National Parks" : "NPS sites"}
@@ -606,12 +606,12 @@ function ExploreContent() {
                   </p>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
                 {error && <p className="text-xs font-medium text-red-600">{error}</p>}
                 <select
                   value={sortBy}
                   onChange={(event) => setSortBy(event.target.value)}
-                  className="min-h-10 rounded-lg border px-3 text-xs font-semibold"
+                  className="min-h-10 w-full rounded-lg border px-3 text-xs font-semibold sm:w-auto"
                   style={{ background: "white", borderColor: "var(--line)", color: "var(--ink)" }}
                   aria-label="Sort parks"
                 >
@@ -623,7 +623,7 @@ function ExploreContent() {
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="min-h-10 rounded-lg border px-3 text-xs font-semibold transition hover:bg-white"
+                    className="min-h-10 w-full rounded-lg border px-3 text-xs font-semibold transition hover:bg-white sm:w-auto"
                     style={{ background: "rgba(255,255,255,0.68)", borderColor: "var(--line)", color: "var(--ink)" }}
                   >
                     Clear filters
@@ -926,12 +926,16 @@ function ParkListCard({
           </CardHeader>
 
           <div className="relative z-10 min-w-0 px-4 pb-4 pt-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium" style={{ color: "var(--muted-strong)" }}>
-              <span>{entryLabel}</span>
-              <span aria-hidden="true" style={{ color: "var(--line)" }}>•</span>
-              <span>Best {bestSeason}</span>
-              <span aria-hidden="true" style={{ color: "var(--line)" }}>•</span>
-              <span className="min-w-0 truncate">{topActivity}</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-medium">
+              <span className="rounded-md border border-[#d8e5df] bg-[#f3f8f5] px-2 py-1 text-[#46645b]">
+                {entryLabel}
+              </span>
+              <span className="rounded-md border border-[#eadfca] bg-[#fbf7ee] px-2 py-1 text-[#755f3a]">
+                Best {bestSeason}
+              </span>
+              <span className="min-w-0 truncate rounded-md border border-[#dfe3e2] bg-[#f6f7f5] px-2 py-1 text-[#5c6464]">
+                {topActivity}
+              </span>
             </div>
 
             <div className="mt-3 grid gap-1.5 border-t pt-3" style={{ borderColor: "var(--line)" }}>
@@ -944,8 +948,8 @@ function ParkListCard({
             </div>
           </div>
 
-          <CardFooter className="relative z-10 mt-auto flex min-w-0 flex-col items-stretch gap-2 border-t bg-white px-4 py-3 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between" style={{ borderColor: "var(--line)" }}>
-            <div className="flex min-w-0 flex-wrap items-center gap-1">
+          <CardFooter className="relative z-10 mt-auto flex min-w-0 flex-col items-stretch gap-2 border-t bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--line)" }}>
+            <div className="hidden min-w-0 items-center justify-between gap-1 sm:flex sm:justify-start">
               <button
                 type="button"
                 onClick={handleStatus}
@@ -982,11 +986,11 @@ function ParkListCard({
                 <span className="hidden sm:inline">Compare</span>
               </button>
             </div>
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Button asChild variant="ghost" size="sm" className="relative z-20 px-2 text-[var(--muted-strong)] hover:bg-[var(--surface-soft)]">
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+              <Button asChild variant="outline" size="sm" className="relative z-20 h-10 px-2 text-[var(--muted-strong)] hover:bg-[var(--surface-soft)] sm:h-7">
                 <Link href="/planner" onClick={(e) => e.stopPropagation()}>Add to trip</Link>
               </Button>
-              <Button asChild size="sm" className="relative z-20 bg-[var(--ink)] text-white transition-all hover:bg-[#252a2d] group-hover:translate-x-0.5">
+              <Button asChild size="sm" className="relative z-20 h-10 bg-[var(--ink)] text-white transition-all hover:bg-[#252a2d] group-hover:translate-x-0.5 sm:h-7">
                 <Link href={`/parks/${park.parkCode}`} onClick={(e) => e.stopPropagation()}>Details</Link>
               </Button>
             </div>

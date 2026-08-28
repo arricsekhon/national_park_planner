@@ -208,6 +208,37 @@ body { overflow-x: clip; }
 
 .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
+.trailquest-trip-map {
+  background: #eef1e9;
+  z-index: 0;
+}
+
+.trailquest-trip-map .leaflet-tile {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.trailquest-trip-map .leaflet-tile-pane { z-index: 1; }
+.trailquest-trip-map .leaflet-overlay-pane { z-index: 2; }
+.trailquest-trip-map .leaflet-shadow-pane { z-index: 3; }
+.trailquest-trip-map .leaflet-marker-pane { z-index: 4; }
+.trailquest-trip-map .leaflet-tooltip-pane { z-index: 5; }
+.trailquest-trip-map .leaflet-popup-pane { z-index: 6; }
+.trailquest-trip-map .leaflet-top,
+.trailquest-trip-map .leaflet-bottom {
+  z-index: 7;
+}
+
+.planner-chat-textarea,
+.planner-chat-textarea:focus,
+.planner-chat-textarea:focus-visible {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-demo-in {
     opacity: 1;

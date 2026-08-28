@@ -64,15 +64,57 @@ interface AiItinerary {
   packingAdditions: string[];
 }
 
+interface PlannerMessage {
+  id: string;
+  role: "assistant" | "user";
+  text: string;
+  action?: "draft" | "apply";
+  parkOptions?: Park[];
+  suggestions?: string[];
+}
+
+interface TripIntent {
+  destination?: string;
+  destinations?: string[];
+  days?: number;
+  dateText?: string;
+  startDate?: string;
+  endDate?: string;
+  startLocation?: string;
+  travelers?: string;
+  difficulty?: string;
+  lodging?: string;
+  concerns?: string;
+  travelMode?: "car" | "flight";
+  departureTime?: string;
+  focus?: string;
+}
+
+interface PlanningStep {
+  icon: string;
+  text: string;
+}
+
+interface PlannerAgentResponse {
+  status: "needs_info" | "ready_to_draft";
+  message: string;
+  missingFields?: string[];
+  normalizedTrip?: TripIntent;
+}
+
 type IconName =
+  | "arrowUp"
   | "calendar"
   | "check"
   | "chevron"
   | "close"
   | "map"
+  | "message"
   | "note"
+  | "panel"
   | "plus"
   | "print"
+  | "refresh"
   | "route"
   | "search"
   | "share"
@@ -80,6 +122,7 @@ type IconName =
 
 const STORAGE_KEY = "trailquest_trips";
 const PACKED_STORAGE_KEY = "trailquest_packed_items";
+const SUGGESTED_PACKING_STORAGE_KEY = "trailquest_suggested_packing";
 const DAY_MS = 86400000;
 const TRIP_STARTERS = [
   {
@@ -108,16 +151,21 @@ const TRIP_STARTERS = [
   },
 ];
 
-const EMPTY_ROUTE_DAYS = [
-  ["Day 1", "Add arrival stop", "Add main trail", "Add backup stop"],
-  ["Day 2", "Add morning stop", "Add scenic stop", "Add notes"],
+const INITIAL_PLANNER_MESSAGES: PlannerMessage[] = [
+  {
+    id: "assistant-welcome",
+    role: "assistant",
+    text: "Tell me where you want to go, when, who is coming, and where you are starting from. I will ask for anything missing before drafting the itinerary.",
+  },
 ];
 
-const TRIP_READY_ITEMS = [
-  "Dates set",
-  "First stop added",
-  "Packing list reviewed",
-  "Notes added",
+const PLANNING_STEPS: PlanningStep[] = [
+  { icon: "🗓️", text: "Checking dates..." },
+  { icon: "🌦️", text: "Reviewing seasonal weather..." },
+  { icon: "🛣️", text: "Estimating drive time and road access..." },
+  { icon: "🥾", text: "Matching trails to your pace..." },
+  { icon: "🎒", text: "Building packing list..." },
+  { icon: "🧭", text: "Drafting your route..." },
 ];
 
 function parseInputDate(value: string): Date | null {
@@ -190,7 +238,451 @@ function groupPackingItems(items: string[]): [string, string[]][] {
 }
 
 function createLocalId(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36)}`;
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function normalizeParkName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\bnational historical park\b/g, "")
+    .replace(/\bnational historic site\b/g, "")
+    .replace(/\bnational\b/g, "")
+    .replace(/\bpark\b/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findBestParkMatch(parks: Park[], destination: string): Park | null {
+  const normalizedDestination = normalizeParkName(destination);
+  if (!normalizedDestination) return null;
+  const destinationWords = normalizedDestination.split(" ").filter((word) => word.length > 2);
+
+  return parks.find((park) => normalizeParkName(park.fullName) === normalizedDestination)
+    ?? parks.find((park) => {
+      const normalizedPark = normalizeParkName(park.fullName);
+      return normalizedPark.includes(normalizedDestination) || normalizedDestination.includes(normalizedPark);
+    })
+    ?? parks.find((park) => {
+      const normalizedPark = normalizeParkName(park.fullName);
+      return destinationWords.length > 0 && destinationWords.every((word) => normalizedPark.includes(word));
+    })
+    ?? null;
+}
+
+function filterParkMatches(parks: Park[], destination: string): Park[] {
+  const normalizedDestination = normalizeParkName(destination);
+  const destinationWords = normalizedDestination.split(" ").filter((word) => word.length > 2);
+  if (!normalizedDestination || destinationWords.length === 0) return [];
+  return parks.filter((park) => {
+    const normalizedPark = normalizeParkName(park.fullName);
+    return normalizedPark === normalizedDestination
+      || normalizedPark.includes(normalizedDestination)
+      || destinationWords.every((word) => normalizedPark.includes(word));
+  });
+}
+
+function knownParkOption(destination: string): Park | null {
+  const normalizedDestination = normalizeParkName(destination);
+  const known: Array<Pick<Park, "parkCode" | "fullName" | "states" | "latLong" | "url" | "designation"> & { aliases: string[] }> = [
+    {
+      aliases: ["zion", "zion national park"],
+      parkCode: "zion",
+      fullName: "Zion National Park",
+      states: "UT",
+      latLong: "lat:37.29839254, long:-113.0265138",
+      url: "https://www.nps.gov/zion/index.htm",
+      designation: "National Park",
+    },
+    {
+      aliases: ["bryce", "bryce canyon", "bryce canyon national park"],
+      parkCode: "brca",
+      fullName: "Bryce Canyon National Park",
+      states: "UT",
+      latLong: "lat:37.58399144, long:-112.1826689",
+      url: "https://www.nps.gov/brca/index.htm",
+      designation: "National Park",
+    },
+    {
+      aliases: ["yosemite", "yosemite national park"],
+      parkCode: "yose",
+      fullName: "Yosemite National Park",
+      states: "CA",
+      latLong: "lat:37.84883288, long:-119.5571873",
+      url: "https://www.nps.gov/yose/index.htm",
+      designation: "National Park",
+    },
+    {
+      aliases: ["olympic", "olympic national park"],
+      parkCode: "olym",
+      fullName: "Olympic National Park",
+      states: "WA",
+      latLong: "lat:47.80392754, long:-123.6663848",
+      url: "https://www.nps.gov/olym/index.htm",
+      designation: "National Park",
+    },
+    {
+      aliases: ["grand canyon", "grand canyon national park"],
+      parkCode: "grca",
+      fullName: "Grand Canyon National Park",
+      states: "AZ",
+      latLong: "lat:36.0001165336, long:-112.121516363",
+      url: "https://www.nps.gov/grca/index.htm",
+      designation: "National Park",
+    },
+    {
+      aliases: ["acadia", "acadia national park"],
+      parkCode: "acad",
+      fullName: "Acadia National Park",
+      states: "ME",
+      latLong: "lat:44.409286, long:-68.247501",
+      url: "https://www.nps.gov/acad/index.htm",
+      designation: "National Park",
+    },
+    {
+      aliases: ["denali", "denali national park"],
+      parkCode: "dena",
+      fullName: "Denali National Park & Preserve",
+      states: "AK",
+      latLong: "lat:63.29777484, long:-151.0526568",
+      url: "https://www.nps.gov/dena/index.htm",
+      designation: "National Park & Preserve",
+    },
+    {
+      aliases: ["yellowstone", "yellowstone national park"],
+      parkCode: "yell",
+      fullName: "Yellowstone National Park",
+      states: "ID,MT,WY",
+      latLong: "lat:44.59824417, long:-110.5471695",
+      url: "https://www.nps.gov/yell/index.htm",
+      designation: "National Park",
+    },
+    {
+      aliases: ["glacier", "glacier national park"],
+      parkCode: "glac",
+      fullName: "Glacier National Park",
+      states: "MT",
+      latLong: "lat:48.68414678, long:-113.8009306",
+      url: "https://www.nps.gov/glac/index.htm",
+      designation: "National Park",
+    },
+    {
+      aliases: ["arches", "arches national park"],
+      parkCode: "arch",
+      fullName: "Arches National Park",
+      states: "UT",
+      latLong: "lat:38.72261844, long:-109.5863666",
+      url: "https://www.nps.gov/arch/index.htm",
+      designation: "National Park",
+    },
+    {
+      aliases: ["sequoia", "sequoia national park"],
+      parkCode: "seki",
+      fullName: "Sequoia & Kings Canyon National Parks",
+      states: "CA",
+      latLong: "lat:36.4863662, long:-118.5657516",
+      url: "https://www.nps.gov/seki/index.htm",
+      designation: "National Parks",
+    },
+    {
+      aliases: ["rocky mountain", "rocky mountain national park"],
+      parkCode: "romo",
+      fullName: "Rocky Mountain National Park",
+      states: "CO",
+      latLong: "lat:40.3556924, long:-105.6972879",
+      url: "https://www.nps.gov/romo/index.htm",
+      designation: "National Park",
+    },
+  ];
+  const match = known.find((park) => {
+    const aliases = park.aliases.map(normalizeParkName);
+    return aliases.some((alias) => normalizedDestination === alias || normalizedDestination.includes(alias));
+  });
+  if (!match) return null;
+  return {
+    parkCode: match.parkCode,
+    fullName: match.fullName,
+    states: match.states,
+    latLong: match.latLong,
+    url: match.url,
+    designation: match.designation,
+    description: "",
+    images: [],
+    entranceFees: [],
+    activities: [],
+    operatingHours: [],
+    contacts: { phoneNumbers: [], emailAddresses: [] },
+    addresses: [],
+  };
+}
+
+function detectDestinations(text: string): string[] {
+  const lower = text.toLowerCase();
+  const matches: Array<{ destination: string; index: number }> = [
+    { destination: "bryce canyon", index: lower.search(/\bbryce(?:\s+canyon)?\b/) },
+    { destination: "zion", index: lower.search(/\bzion\b/) },
+    { destination: "yosemite", index: lower.search(/\byosemite\b/) },
+    { destination: "olympic", index: lower.search(/\bolympic\b/) },
+    { destination: "grand canyon", index: lower.search(/\bgrand\s+canyon\b/) },
+    { destination: "acadia", index: lower.search(/\bacadia\b/) },
+    { destination: "denali", index: lower.search(/\bdenali\b/) },
+    { destination: "yellowstone", index: lower.search(/\byellowstone\b/) },
+    { destination: "glacier", index: lower.search(/\bglacier\b/) },
+    { destination: "arches", index: lower.search(/\barches\b/) },
+    { destination: "sequoia", index: lower.search(/\bsequoia\b/) },
+    { destination: "rocky mountain", index: lower.search(/\brocky\s+mountain\b/) },
+  ].filter((match) => match.index >= 0);
+
+  return matches
+    .sort((a, b) => a.index - b.index)
+    .map((match) => match.destination)
+    .filter((destination, index, all) => all.indexOf(destination) === index);
+}
+
+function detectTravelMode(text: string): TripIntent["travelMode"] | undefined {
+  const lower = text.toLowerCase();
+  if (/\b(car|drive|driving|road trip|roadtrip|by road)\b/.test(lower)) return "car";
+  if (/\b(fly|flight|flying|airport|plane)\b/.test(lower)) return "flight";
+  return undefined;
+}
+
+function detectDepartureTime(text: string): string | undefined {
+  const lower = text.toLowerCase();
+  if (/\b(before dawn|pre dawn|predawn)\b/.test(lower)) return "Before dawn";
+  if (/\bearly morning\b/.test(lower)) return "Early morning";
+  if (/\bafter lunch\b/.test(lower)) return "After lunch";
+  if (/\bevening\b/.test(lower)) return "Evening";
+  const match = text.match(/\b(?:leave|depart|start|start driving|heading out|go)\s+(?:at|around|about)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.))\b/i)
+    ?? text.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.))\b/i);
+  return match?.[1]?.replace(/\./g, "").toUpperCase();
+}
+
+function detectTripFocus(text: string): string | undefined {
+  const lower = text.toLowerCase();
+  if (/\b(hike only|hiking only|only hikes|hikes only)\b/.test(lower)) return "hikes only";
+  if (/\b(scenic only|scenic spots only|viewpoints only|views only)\b/.test(lower)) return "scenic spots only";
+  if (/\b(both|mix|mixed|hikes and scenic|hiking and scenic)\b/.test(lower)) return "hikes and scenic spots";
+  if (/\b(family|kid friendly|kid-friendly|easy)\b/.test(lower)) return "easy family-friendly stops";
+  if (/\b(photo|photography|sunrise|sunset)\b/.test(lower)) return "photography and viewpoints";
+  return undefined;
+}
+
+const MONTH_INDEX: Record<string, number> = {
+  jan: 0,
+  january: 0,
+  feb: 1,
+  february: 1,
+  mar: 2,
+  march: 2,
+  apr: 3,
+  april: 3,
+  may: 4,
+  jun: 5,
+  june: 5,
+  jul: 6,
+  july: 6,
+  aug: 7,
+  august: 7,
+  sep: 8,
+  sept: 8,
+  september: 8,
+  oct: 9,
+  october: 9,
+  nov: 10,
+  november: 10,
+  dec: 11,
+  december: 11,
+};
+
+function toInputDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateRange(text: string): { dateText: string; startDate: string; endDate: string; days: number } | null {
+  const match = text.match(/\b(?:from\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:\s*(?:to|-|through)\s*(?:(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+)?(\d{1,2}))?(?:,\s*(\d{4}))?/i);
+  const dayFirstMatch = text.match(/\b(?:from\s+)?(\d{1,2})\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s*(?:to|-|through)\s*(\d{1,2})\s*(?:(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?))?)?(?:,\s*(\d{4}))?/i);
+  if (!match && !dayFirstMatch) return null;
+  const startMonthName = (match?.[1] ?? dayFirstMatch?.[2] ?? "").toLowerCase();
+  const startDay = Number(match?.[2] ?? dayFirstMatch?.[1]);
+  const endMonthName = (match?.[3] ?? dayFirstMatch?.[4] ?? startMonthName).toLowerCase();
+  const endDay = Number(match?.[4] ?? dayFirstMatch?.[3] ?? startDay);
+  const currentYear = new Date().getFullYear();
+  const yearText = match?.[5] ?? dayFirstMatch?.[5];
+  const year = yearText ? Number(yearText) : currentYear;
+  const startDate = new Date(year, MONTH_INDEX[startMonthName], startDay);
+  let endDate = new Date(year, MONTH_INDEX[endMonthName], endDay);
+  if (endDate < startDate) {
+    endDate = new Date(year + 1, MONTH_INDEX[endMonthName], endDay);
+  }
+  const days = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / DAY_MS) + 1);
+  return {
+    dateText: (match?.[0] ?? dayFirstMatch?.[0] ?? "").replace(/^from\s+/i, "").trim(),
+    startDate: toInputDate(startDate),
+    endDate: toInputDate(endDate),
+    days,
+  };
+}
+
+function parseTripIntent(text: string, previous: TripIntent = {}): TripIntent {
+  const lower = text.toLowerCase();
+  const destinations = uniqueItems([...detectDestinations(text), ...(previous.destinations ?? [])]);
+  const destinationMatch = lower.match(/\b(zion|bryce canyon|bryce|yosemite|olympic|grand canyon|acadia|denali|yellowstone|glacier|arches|sequoia|rocky mountain)\b/);
+  const daysMatch = lower.match(/\b(\d{1,2})\s*(?:day|days|night|nights)\b/);
+  const routeFromMatch = text.match(/\bfrom\s+([A-Za-z\s,.-]+?)\s+to\s+([A-Za-z\s,.-]+?)(?=\s+(?:from|in|on|for|with|and|but)\b|$)/i);
+  const fromMatch = text.match(/\bfrom\s+([A-Za-z\s,.-]+?)(?=\s+(?:in|on|for|with|to|and|but)\b|$)/i);
+  const dateMatch = text.match(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|winter|spring|summer|fall|autumn|christmas|thanksgiving|this weekend|next weekend|next month|this month)\b(?:\s+\d{1,2})?(?:\s*-\s*\d{1,2})?(?:,\s*\d{4})?/i);
+  const dateRange = parseDateRange(text);
+  const travelersMatch = lower.match(/\b(family|kids|children|solo|couple|seniors?|friends|group)\b/);
+  const difficultyMatch = lower.match(/\b(easy|moderate|hard|strenuous|accessible|kid-friendly|family-friendly)\b/);
+  const lodgingMatch = lower.match(/\b(hotel|camping|campground|rv|cabin|lodge|airbnb)\b/);
+  const travelMode = detectTravelMode(text) ?? previous.travelMode;
+  const concerns = [
+    lower.includes("weather") ? "weather" : "",
+    lower.includes("road") || lower.includes("drive") || lower.includes("snow") || travelMode === "car" ? "road access" : "",
+    lower.includes("permit") ? "permits" : "",
+  ].filter(Boolean).join(", ");
+
+  return {
+    ...previous,
+    destinations,
+    destination: destinationMatch?.[0] ?? routeFromMatch?.[2]?.trim().replace(/[.?!]$/, "") ?? previous.destination,
+    days: daysMatch ? Number(daysMatch[1]) : dateRange?.days ?? previous.days,
+    dateText: dateRange?.dateText ?? dateMatch?.[0] ?? previous.dateText,
+    startDate: dateRange?.startDate ?? previous.startDate,
+    endDate: dateRange?.endDate ?? previous.endDate,
+    startLocation: routeFromMatch?.[1]?.trim().replace(/[.?!]$/, "") ?? fromMatch?.[1]?.trim().replace(/[.?!]$/, "") ?? previous.startLocation,
+    travelers: travelersMatch?.[0] ?? previous.travelers,
+    difficulty: difficultyMatch?.[0] ?? previous.difficulty,
+    lodging: lodgingMatch?.[0] ?? previous.lodging,
+    concerns: concerns || previous.concerns,
+    travelMode,
+    departureTime: detectDepartureTime(text) ?? previous.departureTime,
+    focus: detectTripFocus(text) ?? previous.focus,
+  };
+}
+
+function getMissingTripFields(intent: TripIntent, hasStops: boolean, hasDates = false, hasTripLength = false): string[] {
+  const missing: string[] = [];
+  if (!hasStops && !intent.destination && !intent.destinations?.length) missing.push("park or destination");
+  if (!intent.dateText && !hasDates) missing.push("dates or season");
+  if (!intent.days && !hasTripLength) missing.push("trip length");
+  if (!intent.startLocation) missing.push("starting place");
+  if (intent.travelMode === "car" && !intent.departureTime) missing.push("departure time");
+  if (!intent.focus) missing.push("trip focus");
+  return missing;
+}
+
+function buildFollowUpQuestion(intent: TripIntent, hasStops: boolean, hasDates = false, hasTripLength = false): string {
+  const primaryDestination = intent.destinations?.[0] ?? intent.destination;
+  const destination = primaryDestination ? `${primaryDestination[0].toUpperCase()}${primaryDestination.slice(1)}` : "That";
+  if (!intent.dateText && !hasDates && !intent.focus) {
+    return `${destination} works. What dates or season should I plan for, and what should the trip focus on?`;
+  }
+  if (!intent.dateText && !hasDates) {
+    return `${destination} works. What dates or season should I plan around?`;
+  }
+  if (!intent.days && !hasTripLength) {
+    return `${destination} works. How many days do you have for this trip?`;
+  }
+  if (intent.travelMode === "car" && !intent.departureTime && !intent.focus) {
+    return `${destination} works. Since you are going by car, what time do you want to leave, and what should the trip focus on?`;
+  }
+  if (intent.travelMode === "car" && !intent.departureTime) {
+    return `${destination} works. What time do you want to leave on the first driving day?`;
+  }
+  if (!intent.focus) {
+    return "What kind of guide should I build: hikes only, scenic spots only, both, family-friendly, or photography stops?";
+  }
+  if (primaryDestination && !hasStops) {
+    return `${destination} is a good start. When are you going, how many days do you have, and where are you starting from?`;
+  }
+  const missing = getMissingTripFields(intent, hasStops, hasDates, hasTripLength);
+  if (missing.length === 0) {
+    return "I have enough to draft this. Add any must-see trail or lodging preference now, or send “draft itinerary”.";
+  }
+  return `I can plan that. I still need ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? ", and a few travel details" : ""}.`;
+}
+
+function buildFollowUpSuggestions(intent: TripIntent): string[] {
+  if (!intent.dateText) {
+    return ["Sep 5 to Sep 10", "This weekend", "Next month", "Summer trip"];
+  }
+  if (intent.travelMode === "car" && !intent.departureTime && !intent.focus) {
+    return [
+      "Leave 5 AM, both hikes and scenic",
+      "Leave 7 AM, scenic spots only",
+      "Leave after lunch, easy family-friendly",
+      "Leave before dawn, hikes only",
+    ];
+  }
+  if (intent.travelMode === "car" && !intent.departureTime) {
+    return ["Leave at 5 AM", "Leave at 7 AM", "Leave after lunch"];
+  }
+  if (!intent.focus) {
+    return ["Hikes only", "Scenic spots only", "Both hikes and scenic", "Family-friendly"];
+  }
+  return [];
+}
+
+function formatPlanningContext(intent: TripIntent): string {
+  return [
+    intent.destinations?.length ? `Destinations in order: ${intent.destinations.join(", ")}` : "",
+    intent.destination && !intent.destinations?.length ? `Destination: ${intent.destination}` : "",
+    intent.days ? `Length: ${intent.days} days` : "",
+    intent.dateText ? `Dates or season: ${intent.dateText}` : "",
+    intent.startLocation ? `Starting from: ${intent.startLocation}` : "",
+    intent.travelMode ? `Travel mode: ${intent.travelMode}` : "",
+    intent.departureTime ? `Preferred departure time: ${intent.departureTime}` : "",
+    intent.focus ? `Trip focus: ${intent.focus}` : "",
+    intent.travelers ? `Travelers: ${intent.travelers}` : "",
+    intent.difficulty ? `Pace: ${intent.difficulty}` : "",
+    intent.lodging ? `Lodging: ${intent.lodging}` : "",
+    intent.concerns ? `Concerns: ${intent.concerns}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+function formatDraftContext(draft: AiItinerary | null): string {
+  if (!draft) return "";
+  return [
+    `Current draft summary: ${draft.summary}`,
+    ...draft.days.map((day) => `Day ${day.day}: ${day.label} at ${day.parkName}; ${day.activities.join(", ")}; tip: ${day.tip}`),
+  ].join("\n");
+}
+
+function parseTimedActivity(activity: string): { time?: string; label: string } {
+  const match = activity.match(/^([0-9]{1,2}(?::[0-9]{2})?\s*(?:AM|PM)?\s*(?:-|–|to)\s*[0-9]{1,2}(?::[0-9]{2})?\s*(?:AM|PM)?)\s*(?:-|–|:)\s*(.+)$/i);
+  if (!match) return { label: activity };
+  return {
+    time: match[1].replace(/\s+/g, " ").trim(),
+    label: match[2].trim(),
+  };
+}
+
+function cleanAssistantText(text: string): string {
+  return text
+    .replace(/\*\*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatAssistantMessage(text: string): { intro: string; questions: string[] } {
+  const cleaned = cleanAssistantText(text);
+  const parts = cleaned
+    .split(/\s+\d+\.\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 1) {
+    return { intro: cleaned, questions: [] };
+  }
+
+  return {
+    intro: parts[0].replace(/:\s*$/, "."),
+    questions: parts.slice(1).map((part) => part.replace(/^\d+\.\s*/, "")),
+  };
 }
 
 function generatePackingList(stops: TripStop[], startDate: string, endDate: string): string[] {
@@ -267,6 +759,29 @@ function savePackedItems(items: Record<string, string[]>) {
   localStorage.setItem(PACKED_STORAGE_KEY, JSON.stringify(items));
 }
 
+function loadSuggestedPacking(): Record<string, string[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(SUGGESTED_PACKING_STORAGE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveSuggestedPacking(items: Record<string, string[]>) {
+  localStorage.setItem(SUGGESTED_PACKING_STORAGE_KEY, JSON.stringify(items));
+}
+
+function uniqueItems(items: string[]): string[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = item.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function rowToTrip(row: Record<string, unknown>): Trip {
   return {
     id: row.id as string,
@@ -293,12 +808,20 @@ export default function PlannerPage() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<"saved" | "error" | null>(null);
   const [packedItemsByTrip, setPackedItemsByTrip] = useState<Record<string, string[]>>(() => loadPackedItems());
-  const [mobileTab, setMobileTab] = useState<"trips" | "plan" | "map" | "notes">("trips");
+  const [suggestedPackingByTrip, setSuggestedPackingByTrip] = useState<Record<string, string[]>>(() => loadSuggestedPacking());
+  const [mobileTab, setMobileTab] = useState<"trips" | "chat" | "plan" | "map" | "notes">("trips");
   const [tripSheetOpen, setTripSheetOpen] = useState(false);
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AiItinerary | null>(null);
+  const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [assistantThinking, setAssistantThinking] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [plannerMessages, setPlannerMessages] = useState<PlannerMessage[]>(INITIAL_PLANNER_MESSAGES);
+  const [tripIntent, setTripIntent] = useState<TripIntent>({});
+  const [planningSteps, setPlanningSteps] = useState<PlanningStep[]>([]);
+  const [tripsRailOpen, setTripsRailOpen] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
@@ -352,7 +875,7 @@ export default function PlannerPage() {
   // Auto-switch to editor on mobile when a trip is selected
   useEffect(() => {
     if (!activeId) return;
-    const timer = window.setTimeout(() => setMobileTab("plan"), 0);
+    const timer = window.setTimeout(() => setMobileTab("chat"), 0);
     return () => window.clearTimeout(timer);
   }, [activeId]);
 
@@ -373,6 +896,19 @@ export default function PlannerPage() {
     }
   }, [user]);
 
+  const resetPlannerChat = () => {
+    setPlannerMessages(INITIAL_PLANNER_MESSAGES);
+    setTripIntent({});
+    setPlanningSteps([]);
+    setChatInput("");
+    setAiError("");
+    setAssistantThinking(false);
+    setAiResult(null);
+    setDraftDialogOpen(false);
+    setParkSearch("");
+    setParkResults([]);
+  };
+
   const newTrip = (starter?: { name?: string; notes?: string }) => {
     const trip: Trip = {
       id: createLocalId("trip"),
@@ -386,6 +922,7 @@ export default function PlannerPage() {
     const next = [trip, ...trips];
     setTrips(next);
     setActiveId(trip.id);
+    resetPlannerChat();
     if (user) {
       supabase.from("trips").insert({
         id: trip.id,
@@ -472,17 +1009,50 @@ export default function PlannerPage() {
     return () => clearTimeout(t);
   }, [parkSearch, searchForParks]);
 
-  const addStop = (park: Park) => {
-    if (!activeTrip) return;
+  const createStopFromPark = (park: Park, day: number): TripStop => {
     const coords = parseLatLong(park.latLong ?? "");
-    const stop: TripStop = {
+    return {
       id: createLocalId("stop"),
       parkCode: park.parkCode,
       parkName: park.fullName,
-      day: (activeTrip.stops[activeTrip.stops.length - 1]?.day ?? 0) + 1,
+      day,
       notes: "",
       ...(coords ?? {}),
     };
+  };
+
+  const addStop = (park: Park) => {
+    const stop = createStopFromPark(park, activeTrip ? (activeTrip.stops[activeTrip.stops.length - 1]?.day ?? 0) + 1 : 1);
+    if (!activeTrip) {
+      const trip: Trip = {
+        id: createLocalId("trip"),
+        name: "My Trip",
+        startDate: "",
+        endDate: "",
+        stops: [stop],
+        notes: "",
+        createdAt: new Date().toISOString(),
+      };
+      const next = [trip, ...trips];
+      setTrips(next);
+      setActiveId(trip.id);
+      if (user) {
+        void supabase.from("trips").insert({
+          id: trip.id,
+          user_id: user.id,
+          name: trip.name,
+          start_date: trip.startDate,
+          end_date: trip.endDate,
+          stops: trip.stops,
+          notes: trip.notes,
+          created_at: trip.createdAt,
+        });
+      } else {
+        saveTrips(next);
+      }
+      resetPlannerChat();
+      return;
+    }
     updateTrip({ ...activeTrip, stops: [...activeTrip.stops, stop] });
     setParkSearch("");
     setParkResults([]);
@@ -499,8 +1069,9 @@ export default function PlannerPage() {
     updateTrip({ ...activeTrip, stops });
   };
 
+  const suggestedPacking = activeTrip ? suggestedPackingByTrip[activeTrip.id] ?? [] : [];
   const packingList = activeTrip
-    ? generatePackingList(activeTrip.stops, activeTrip.startDate, activeTrip.endDate)
+    ? uniqueItems([...generatePackingList(activeTrip.stops, activeTrip.startDate, activeTrip.endDate), ...suggestedPacking])
     : [];
   const packedItems = activeTrip ? packedItemsByTrip[activeTrip.id] ?? [] : [];
   const packedCount = packedItems.filter((item) => packingList.includes(item)).length;
@@ -521,9 +1092,35 @@ export default function PlannerPage() {
     });
   };
 
-  const generateItinerary = async () => {
-    if (!activeTrip || !activeTrip.stops.length) return;
+  const addPlannerMessage = (message: Omit<PlannerMessage, "id">) => {
+    if (message.role === "assistant") setAssistantThinking(false);
+    setPlannerMessages((prev) => [...prev, { ...message, id: createLocalId("msg") }]);
+  };
+
+  const askPlannerAgent = async (message: string): Promise<PlannerAgentResponse | null> => {
+    const res = await fetch("/api/planner-agent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        currentTrip: activeTrip ? {
+          name: activeTrip.name,
+          startDate: activeTrip.startDate,
+          endDate: activeTrip.endDate,
+          stops: activeTrip.stops,
+          notes: activeTrip.notes,
+        } : null,
+        currentIntent: tripIntent,
+      }),
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<PlannerAgentResponse>;
+  };
+
+  const generateItinerary = async (source: "button" | "chat" = "button", intentOverride = tripIntent, tripOverride = activeTrip) => {
+    if (!tripOverride || !tripOverride.stops.length) return;
     setAiLoading(true);
+    setPlanningSteps(source === "chat" ? PLANNING_STEPS : []);
     setAiError("");
     setAiResult(null);
     try {
@@ -531,36 +1128,330 @@ export default function PlannerPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tripName: activeTrip.name,
-          startDate: activeTrip.startDate,
-          endDate: activeTrip.endDate,
-          tripDays,
-          stops: activeTrip.stops,
+          tripName: tripOverride.name,
+          startDate: tripOverride.startDate,
+          endDate: tripOverride.endDate,
+          tripDays: getTripDays(tripOverride.startDate, tripOverride.endDate) || intentOverride.days || tripOverride.stops.length,
+          stops: tripOverride.stops,
+          planningContext: [formatPlanningContext(intentOverride), formatDraftContext(aiResult)].filter(Boolean).join("\n\n"),
         }),
       });
       const data = await res.json() as AiItinerary & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed");
       setAiResult(data);
+      setDraftDialogOpen(true);
+      if (source === "chat") {
+        addPlannerMessage({
+          role: "assistant",
+          text: `I drafted ${data.days.length} ${data.days.length === 1 ? "day" : "days"} for ${tripOverride.name || "this trip"}. Review it, then apply it to update the editable stops.`,
+          action: "apply",
+        });
+      }
     } catch (err) {
-      setAiError(err instanceof Error ? err.message : "Something went wrong.");
+      const message = err instanceof Error ? err.message : "Something went wrong.";
+      setAiError(message);
+      if (source === "chat") {
+        addPlannerMessage({
+          role: "assistant",
+          text: `I could not draft the itinerary yet: ${message}`,
+        });
+      }
     } finally {
       setAiLoading(false);
+      setPlanningSteps([]);
     }
   };
 
   const applyItinerary = () => {
     if (!activeTrip || !aiResult) return;
-    const updatedStops = activeTrip.stops.map((stop) => {
-      const match = aiResult.days.find(
-        (d) => d.parkName.toLowerCase().includes(stop.parkName.split(" ")[0].toLowerCase())
-      ) ?? aiResult.days[stop.day - 1] ?? aiResult.days[0];
-      if (!match) return stop;
-      const notes = match.activities.join(" · ") + (match.tip ? ` — ${match.tip}` : "");
-      return { ...stop, day: match.day, notes };
+    const updatedStops = aiResult.days.map((day) => {
+      const normalizedAiPark = normalizeParkName(day.parkName);
+      const sourceStop = activeTrip.stops.find((stop) => {
+        const normalizedStopPark = normalizeParkName(stop.parkName);
+        return normalizedAiPark === normalizedStopPark
+          || normalizedAiPark.includes(normalizedStopPark)
+          || normalizedStopPark.includes(normalizedAiPark);
+      }) ?? activeTrip.stops.find((stop) => stop.day === day.day) ?? activeTrip.stops[0];
+      const isTravelDay = normalizeParkName(day.parkName) === "travel day";
+      const notes = day.activities.join(" · ") + (day.tip ? ` — ${day.tip}` : "");
+      return {
+        id: createLocalId(`ai-day-${day.day}`),
+        parkCode: isTravelDay ? `travel-day-${day.day}` : sourceStop?.parkCode ?? createLocalId("park"),
+        parkName: isTravelDay ? "Travel Day" : day.parkName || sourceStop?.parkName || "Planned Day",
+        day: day.day,
+        notes,
+        lat: isTravelDay ? undefined : sourceStop?.lat,
+        lng: isTravelDay ? undefined : sourceStop?.lng,
+      };
     });
-    updateTrip({ ...activeTrip, stops: updatedStops });
+    updateTrip({
+      ...activeTrip,
+      startDate: tripIntent.startDate ?? activeTrip.startDate,
+      endDate: tripIntent.endDate ?? activeTrip.endDate,
+      stops: updatedStops,
+    });
+    if (aiResult.packingAdditions?.length) {
+      setSuggestedPackingByTrip((prev) => {
+        const next = {
+          ...prev,
+          [activeTrip.id]: uniqueItems([...(prev[activeTrip.id] ?? []), ...aiResult.packingAdditions]),
+        };
+        saveSuggestedPacking(next);
+        return next;
+      });
+    }
     setAiResult(null);
+    setDraftDialogOpen(false);
+    setMobileTab("plan");
     toast("Itinerary applied to your planner!");
+    addPlannerMessage({
+      role: "assistant",
+      text: "Applied. The itinerary panel now shows the day-by-day plan, and the trip dates are updated at the top.",
+    });
+  };
+
+  const reviseDraftInChat = () => {
+    setDraftDialogOpen(false);
+    setMobileTab("chat");
+    setChatInput("Make this itinerary ");
+    addPlannerMessage({
+      role: "assistant",
+      text: "What should I change before you apply it? You can ask for a slower pace, kid-friendly stops, less driving, different trails, lodging notes, or packing changes.",
+    });
+  };
+
+  const selectParkFromChat = async (park: Park) => {
+    if (!activeTrip) return;
+    const stop = createStopFromPark(park, (activeTrip.stops[activeTrip.stops.length - 1]?.day ?? 0) + 1);
+    const updatedTrip: Trip = {
+      ...activeTrip,
+      startDate: tripIntent.startDate ?? activeTrip.startDate,
+      endDate: tripIntent.endDate ?? activeTrip.endDate,
+      stops: [...activeTrip.stops, stop],
+    };
+    updateTrip(updatedTrip);
+    setParkSearch("");
+    setParkResults([]);
+    addPlannerMessage({
+      role: "assistant",
+      text: `Added ${park.fullName}. I will draft the itinerary from this official park stop now.`,
+    });
+
+    const missing = getMissingTripFields(
+      tripIntent,
+      true,
+      Boolean(updatedTrip.startDate || updatedTrip.endDate),
+      getTripDays(updatedTrip.startDate, updatedTrip.endDate) > 0 || Boolean(tripIntent.days)
+    );
+    if (missing.length > 0) {
+      const hasUpdatedDates = Boolean(updatedTrip.startDate || updatedTrip.endDate);
+      const hasUpdatedTripLength = getTripDays(updatedTrip.startDate, updatedTrip.endDate) > 0 || Boolean(tripIntent.days);
+      addPlannerMessage({
+        role: "assistant",
+        text: buildFollowUpQuestion(tripIntent, true, hasUpdatedDates, hasUpdatedTripLength),
+        suggestions: buildFollowUpSuggestions(tripIntent),
+      });
+      return;
+    }
+
+    await generateItinerary("chat", tripIntent, updatedTrip);
+  };
+
+  const handlePlannerPrompt = async (prompt: string) => {
+    const text = prompt.trim();
+    if (!text) return;
+    setChatInput("");
+    addPlannerMessage({ role: "user", text });
+    setAssistantThinking(true);
+
+    let workingTrip = activeTrip;
+    if (!workingTrip) {
+      const trip: Trip = {
+        id: createLocalId("trip"),
+        name: "TrailQuest draft",
+        startDate: "",
+        endDate: "",
+        stops: [],
+        notes: "",
+        createdAt: new Date().toISOString(),
+      };
+      const next = [trip, ...trips];
+      setTrips(next);
+      setActiveId(trip.id);
+      workingTrip = trip;
+      if (user) {
+        void supabase.from("trips").insert({
+          id: trip.id,
+          user_id: user.id,
+          name: trip.name,
+          start_date: trip.startDate,
+          end_date: trip.endDate,
+          stops: trip.stops,
+          notes: trip.notes,
+          created_at: trip.createdAt,
+        });
+      } else {
+        saveTrips(next);
+      }
+    }
+
+    const agentResponse = await askPlannerAgent(text).catch(() => {
+      setAssistantThinking(false);
+      return null;
+    });
+    const agentIntent = agentResponse?.normalizedTrip ?? {};
+    const nextIntent = { ...parseTripIntent(text, tripIntent), ...agentIntent };
+    const hasStops = workingTrip.stops.length > 0;
+    const hasDates = Boolean(workingTrip.startDate || workingTrip.endDate || nextIntent.startDate || nextIntent.endDate);
+    const hasTripLength = getTripDays(workingTrip.startDate, workingTrip.endDate) > 0 || Boolean(nextIntent.days);
+    const missing = getMissingTripFields(nextIntent, hasStops, hasDates, hasTripLength);
+    const shouldDraft = missing.length === 0;
+    const onlyParkName = nextIntent.destination ? text.toLowerCase().trim() === nextIntent.destination.toLowerCase() : false;
+    const tripWithIntent: Trip = {
+      ...workingTrip,
+      startDate: nextIntent.startDate ?? workingTrip.startDate,
+      endDate: nextIntent.endDate ?? workingTrip.endDate,
+    };
+
+    setTripIntent(nextIntent);
+    updateTrip(tripWithIntent);
+
+    if (onlyParkName) {
+      addPlannerMessage({
+        role: "assistant",
+        text: buildFollowUpQuestion(nextIntent, hasStops, hasDates, hasTripLength),
+        suggestions: buildFollowUpSuggestions(nextIntent),
+      });
+      return;
+    }
+
+    if (!hasStops) {
+      const requestedDestinations = nextIntent.destinations?.length
+        ? nextIntent.destinations
+        : nextIntent.destination
+          ? [nextIntent.destination]
+          : [];
+      if (requestedDestinations.length) {
+        if (shouldDraft) {
+          setAiLoading(true);
+          setPlanningSteps(PLANNING_STEPS);
+          addPlannerMessage({
+            role: "assistant",
+            text: agentResponse?.message ?? "I have enough to start. I am matching the park to TrailQuest data before drafting the route.",
+          });
+          try {
+            const resolvedParks: Park[] = [];
+            const unresolvedOptions: Park[] = [];
+
+            for (const destination of requestedDestinations) {
+              const knownPark = knownParkOption(destination);
+              if (knownPark) {
+                resolvedParks.push(knownPark);
+                continue;
+              }
+
+              const data = await searchParks(destination, "", 0, 8);
+              const matches = filterParkMatches(data.parks, destination);
+              const park = findBestParkMatch(matches, destination);
+              if (park) {
+                resolvedParks.push(park);
+              } else {
+                unresolvedOptions.push(...matches);
+              }
+            }
+
+            if (resolvedParks.length !== requestedDestinations.length) {
+              setAiLoading(false);
+              setPlanningSteps([]);
+              const missingDestinations = requestedDestinations.filter((destination) =>
+                !resolvedParks.some((park) => normalizeParkName(park.fullName).includes(normalizeParkName(destination)))
+              );
+              const destinationExample = (missingDestinations.length ? missingDestinations : requestedDestinations)
+                .map((destination) => `${destination.replace(/\b\w/g, (char) => char.toUpperCase())} National Park`)
+                .join(" and ");
+              const parkOptions = uniqueItems(unresolvedOptions.map((park) => park.parkCode))
+                .map((parkCode) => unresolvedOptions.find((park) => park.parkCode === parkCode))
+                .filter((park): park is Park => Boolean(park))
+                .slice(0, 4);
+              addPlannerMessage({
+                role: "assistant",
+                text: parkOptions.length
+                  ? "I found possible official park matches. Pick the missing park here in chat, then I will draft the itinerary."
+                  : `I could not find every official park match. Try the destination again by full official name, like “${destinationExample}”.`,
+                parkOptions: parkOptions.length ? parkOptions : undefined,
+              });
+              return;
+            }
+
+            const updatedTrip = {
+              ...tripWithIntent,
+              stops: resolvedParks.map((park, index) => createStopFromPark(park, index + 1)),
+            };
+            updateTrip(updatedTrip);
+            setParkSearch("");
+            setParkResults([]);
+            await generateItinerary("chat", nextIntent, updatedTrip);
+          } catch {
+            setAiLoading(false);
+            setPlanningSteps([]);
+            const fallbackParks = requestedDestinations
+              .map((destination) => knownParkOption(destination))
+              .filter((park): park is Park => Boolean(park));
+            if (fallbackParks.length === requestedDestinations.length) {
+              const updatedTrip = {
+                ...tripWithIntent,
+                stops: fallbackParks.map((park, index) => createStopFromPark(park, index + 1)),
+              };
+              updateTrip(updatedTrip);
+              setParkSearch("");
+              setParkResults([]);
+              addPlannerMessage({
+                role: "assistant",
+                text: `I matched ${fallbackParks.map((park) => park.fullName).join(" and ")} from the built-in park list. I will draft the itinerary now.`,
+              });
+              await generateItinerary("chat", nextIntent, updatedTrip);
+              return;
+            }
+            const destinationExample = requestedDestinations.length
+              ? requestedDestinations.map((destination) => `${destination.replace(/\b\w/g, (char) => char.toUpperCase())} National Park`).join(" and ")
+              : "the full park name";
+            addPlannerMessage({
+              role: "assistant",
+              text: `I could not load live park matches yet. Try the destination again by full official name, like “${destinationExample}”.`,
+              parkOptions: fallbackParks.length ? fallbackParks : undefined,
+            });
+          }
+          return;
+        }
+        addPlannerMessage({
+          role: "assistant",
+          text: buildFollowUpQuestion(nextIntent, hasStops, hasDates, hasTripLength),
+          suggestions: buildFollowUpSuggestions(nextIntent),
+        });
+      } else {
+        addPlannerMessage({
+          role: "assistant",
+          text: buildFollowUpQuestion(nextIntent, hasStops, hasDates, hasTripLength),
+          suggestions: buildFollowUpSuggestions(nextIntent),
+        });
+      }
+      return;
+    }
+
+    if (!shouldDraft) {
+      addPlannerMessage({
+        role: "assistant",
+        text: buildFollowUpQuestion(nextIntent, hasStops, hasDates, hasTripLength),
+        suggestions: buildFollowUpSuggestions(nextIntent),
+      });
+      return;
+    }
+
+    addPlannerMessage({
+      role: "assistant",
+      text: agentResponse?.message ?? "I have enough to draft this around your stops, dates, starting place, travel style, weather assumptions, road access, and packing needs.",
+    });
+    void generateItinerary("chat", nextIntent, tripWithIntent);
   };
 
   return (
@@ -576,8 +1467,9 @@ export default function PlannerPage() {
       )}
       <div className="sticky top-[var(--nav-h)] z-30 border-b bg-white/95 px-3 py-2 backdrop-blur lg:hidden" style={{ borderColor: "var(--line)" }}>
         <Tabs value={mobileTab} onValueChange={(value) => setMobileTab(value as typeof mobileTab)} className="gap-0">
-          <TabsList className="grid h-10 w-full grid-cols-4 rounded-lg bg-[var(--surface)] p-1">
+          <TabsList className="grid h-10 w-full grid-cols-5 rounded-lg bg-[var(--surface)] p-1">
             <TabsTrigger value="trips" className="rounded-md text-xs">Trips</TabsTrigger>
+            <TabsTrigger value="chat" className="rounded-md text-xs" disabled={!activeTrip}>Chat</TabsTrigger>
             <TabsTrigger value="plan" className="rounded-md text-xs" disabled={!activeTrip}>Plan</TabsTrigger>
             <TabsTrigger value="map" className="rounded-md text-xs" disabled={!activeTrip}>Map</TabsTrigger>
             <TabsTrigger value="notes" className="rounded-md text-xs" disabled={!activeTrip}>Notes</TabsTrigger>
@@ -585,9 +1477,36 @@ export default function PlannerPage() {
         </Tabs>
       </div>
 
-      <div className="mx-auto grid min-h-[calc(100vh-66px)] w-full max-w-[1760px] gap-4 px-3 py-3 sm:px-4 sm:py-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
+      <div className={`${tripsRailOpen ? "lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]" : "lg:grid-cols-[64px_minmax(0,1fr)]"} relative mx-auto grid min-h-[calc(100vh-66px)] w-full max-w-[1760px] gap-4 px-3 py-3 sm:px-4 sm:py-4`}>
+        {!tripsRailOpen && (
+          <TooltipProvider>
+            <aside
+              className="hidden rounded-lg border bg-white/78 px-2 py-3 lg:sticky lg:top-[82px] lg:flex lg:h-[calc(100vh-98px)] lg:flex-col lg:items-center"
+              style={{ borderColor: "var(--line)", backdropFilter: "blur(18px)", boxShadow: "var(--shadow-sm)" }}
+              aria-label="Collapsed trips navigation"
+            >
+              <div className="flex flex-col items-center gap-3">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      onClick={() => setTripsRailOpen(true)}
+                      variant="ghost"
+                      size="icon-lg"
+                      className="h-10 w-10 rounded-lg text-[var(--ink)] hover:bg-[var(--surface)]"
+                      aria-label="Show trips"
+                    >
+                      <Icon name="panel" className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Show trips</TooltipContent>
+                </Tooltip>
+              </div>
+            </aside>
+          </TooltipProvider>
+        )}
         <aside
-          className={`${mobileTab === "trips" ? "block" : "hidden"} lg:block rounded-lg border bg-white/75 p-3.5 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
+          className={`${mobileTab === "trips" ? "block" : "hidden"} ${tripsRailOpen ? "lg:block" : "lg:hidden"} rounded-lg border bg-white/75 p-3.5 lg:sticky lg:top-[82px] lg:h-[calc(100vh-98px)]`}
           style={{ borderColor: "var(--line)", backdropFilter: "blur(18px)" }}
         >
           <div className="flex items-center justify-between gap-3">
@@ -602,16 +1521,40 @@ export default function PlannerPage() {
                 Draft routes, dates, packing, and notes.
               </p>
             </div>
-            <Button
-              type="button"
-              onClick={() => newTrip()}
-              size="icon-lg"
-              className="shrink-0 bg-[var(--ink)] text-white shadow-[0_12px_26px_rgba(17,19,21,0.16)] hover:bg-[var(--ink)]/90"
-              aria-label="New trip"
-              title="New trip"
-            >
-              <Icon name="plus" />
-            </Button>
+            <TooltipProvider>
+              <div className="flex shrink-0 items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      onClick={() => setTripsRailOpen(false)}
+                      variant="outline"
+                      size="icon-lg"
+                      className="hidden h-10 w-10 rounded-lg border-[#d8ddd8] bg-white text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--ink)] lg:inline-flex"
+                      aria-label="Hide trips"
+                    >
+                      <Icon name="panel" className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Hide trips</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      onClick={() => newTrip()}
+                      size="icon-lg"
+                      className="bg-[var(--ink)] text-white shadow-[0_12px_26px_rgba(17,19,21,0.16)] hover:bg-[var(--ink)]/90"
+                      aria-label="New trip"
+                      title="New trip"
+                    >
+                      <Icon name="plus" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>New trip</TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           </div>
 
           <div className="mt-4 flex items-center justify-between rounded-lg border bg-[var(--surface)] px-3 py-2" style={{ borderColor: "var(--line)" }}>
@@ -723,75 +1666,80 @@ export default function PlannerPage() {
               className="min-h-[calc(100vh-98px)] rounded-lg border bg-white/80 p-5 sm:p-7"
               style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
             >
-              <div className="grid min-h-[calc(100vh-154px)] gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.65fr)] lg:items-center">
-                <section>
-                  <span
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-lg"
-                    style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+              <div className="flex min-h-[calc(100vh-154px)] flex-col items-center justify-center px-1 text-center sm:px-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>
+                  Trip planner
+                </p>
+                <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight sm:text-4xl" style={{ color: "var(--ink)" }}>
+                  Start with a park stop.
+                </h2>
+                <Popover open={Boolean(parkSearch.trim())}>
+                  <PopoverAnchor asChild>
+                    <div className="relative mt-8 w-full max-w-xl text-left">
+                      <Icon name="search" className="pointer-events-none absolute left-5 top-1/2 h-6 w-6 -translate-y-1/2 text-[var(--muted)]" />
+                      <Input
+                        type="text"
+                        placeholder="Add a park stop..."
+                        value={parkSearch}
+                        onChange={(e) => setParkSearch(e.target.value)}
+                        className="h-16 rounded-2xl border-[#d8ddd8] bg-white pl-14 pr-5 text-lg font-medium text-[var(--ink)] shadow-[0_14px_36px_rgba(17,19,21,0.06)] placeholder:text-[var(--muted)]"
+                      />
+                    </div>
+                  </PopoverAnchor>
+                  <PopoverContent
+                    align="center"
+                    onOpenAutoFocus={(event) => event.preventDefault()}
+                    className="w-[min(92vw,34rem)] overflow-hidden rounded-lg border bg-white p-0"
+                    style={{ borderColor: "var(--line)" }}
                   >
-                    <Icon name="map" className="h-5 w-5" />
-                  </span>
-                  <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>
-                    Trip planner
-                  </p>
-                  <h2 className="mt-2 max-w-xl text-3xl font-semibold leading-tight sm:text-4xl" style={{ color: "var(--ink)" }}>
-                    Start a trip plan with the first park.
-                  </h2>
-                  <p className="mt-4 max-w-xl text-base leading-7" style={{ color: "var(--muted)" }}>
-                    Create a trip, add park stops, then keep dates, packing, and notes with the route.
-                  </p>
-
-                  <div className="mt-7 grid gap-3 sm:grid-cols-3">
-                    {TRIP_STARTERS.map((starter) => (
-                      <button
-                        key={starter.name}
-                        type="button"
-                        onClick={() => newTrip(starter)}
-                        className="rounded-lg border bg-white p-4 text-left transition hover:-translate-y-0.5"
-                        style={{ borderColor: "var(--line)", boxShadow: "0 10px 26px rgba(17,19,21,0.05)" }}
-                      >
-                        <span className="inline-flex rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: "var(--sand)", color: "var(--ink)" }}>
-                          {starter.label}
-                        </span>
-                        <span className="mt-3 block text-sm font-semibold" style={{ color: "var(--ink)" }}>{starter.name}</span>
-                        <span className="mt-1 block text-xs leading-5" style={{ color: "var(--muted)" }}>{starter.detail}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => newTrip()}
-                    className="mt-5 inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
-                    style={{ background: "var(--ink)" }}
-                  >
-                    <Icon name="plus" />
-                    Create blank trip
-                  </button>
-                </section>
-
-                <section className="rounded-lg border p-4 sm:p-5" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.76)" }}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-                    What the planner tracks
-                  </p>
-                  <div className="mt-4 grid gap-3">
-                    {[
-                      ["1", "Add park stops", "Search NPS parks and keep each stop tied to a travel day."],
-                      ["2", "Draft the itinerary", "Use the AI draft after stops are added, then edit the notes yourself."],
-                      ["3", "Check before you go", "Packing list, route map, saved notes, print, and sharing stay with the trip."],
-                    ].map(([step, title, detail]) => (
-                      <div key={step} className="flex gap-3 rounded-lg border bg-white p-3" style={{ borderColor: "var(--line)" }}>
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white" style={{ background: "var(--accent)" }}>
-                          {step}
-                        </span>
-                        <span>
-                          <span className="block text-sm font-semibold" style={{ color: "var(--ink)" }}>{title}</span>
-                          <span className="mt-1 block text-xs leading-5" style={{ color: "var(--muted)" }}>{detail}</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                    <Command shouldFilter={false} className="rounded-lg bg-white">
+                      <CommandList>
+                        {searching && (
+                          <div className="space-y-2 p-3">
+                            {[1, 2, 3].map((item) => (
+                              <div key={item} className="flex items-center gap-3">
+                                <Skeleton className="h-9 w-9 rounded-md bg-[var(--linen)]" />
+                                <div className="flex-1 space-y-2">
+                                  <Skeleton className="h-3.5 w-3/4 bg-[var(--linen)]" />
+                                  <Skeleton className="h-3 w-1/3 bg-[var(--linen)]" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {!searching && parkResults.length === 0 && <CommandEmpty>No parks found.</CommandEmpty>}
+                        <CommandGroup heading="Add a stop">
+                          {parkResults.map((park) => (
+                            <CommandItem
+                              key={park.parkCode}
+                              value={park.fullName}
+                              onSelect={() => addStop(park)}
+                              className="cursor-pointer rounded-md px-3 py-3"
+                            >
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#edf5ef] text-[#1f7668]">
+                                <Icon name="plus" className="h-4 w-4" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-semibold">{park.fullName}</span>
+                                <span className="mt-0.5 block text-xs text-muted-foreground">
+                                  {park.states || "National Park Service"}
+                                </span>
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                  <Button type="button" onClick={() => setParkSearch("Zion")} variant="outline" className="h-9 bg-white">
+                    Try Zion
+                  </Button>
+                  <Button type="button" onClick={() => newTrip()} variant="outline" className="h-9 bg-white text-[var(--accent)]">
+                    Blank trip
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
@@ -886,43 +1834,43 @@ export default function PlannerPage() {
                   </div>
 
                   <TooltipProvider>
-                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:justify-end">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      onClick={saveTrip}
-                      disabled={saving}
-                      variant="outline"
-                      className="h-10 bg-white font-semibold"
-                      style={{
-                        color: saveMsg === "saved" ? "var(--accent)" : saveMsg === "error" ? "#b42318" : "var(--ink)",
-                        borderColor: saveMsg === "saved" ? "rgba(23,109,101,0.24)" : saveMsg === "error" ? "rgba(180,35,24,0.22)" : "var(--line)",
-                        background: saveMsg === "saved" ? "var(--accent-soft)" : "white",
-                      }}
-                    >
-                      <Icon name="check" className="h-4 w-4" />
-                      {saving ? "Saving…" : saveMsg === "saved" ? "Saved!" : saveMsg === "error" ? "Error" : "Save"}
-                    </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Save trip changes</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      onClick={() => deleteTrip(activeTrip.id)}
-                      variant="outline"
-                      className="h-10 bg-white font-semibold text-[#9f241b] hover:bg-red-50 hover:text-[#9f241b]"
-                      style={{ borderColor: "rgba(180,35,24,0.18)", color: "#9f241b" }}
-                    >
-                      <Icon name="trash" className="h-4 w-4" />
-                      Delete
-                    </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Delete this trip</TooltipContent>
-                    </Tooltip>
-                  </div>
+                    <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            onClick={saveTrip}
+                            disabled={saving}
+                            variant="outline"
+                            className="h-10 flex-1 gap-2 rounded-md border-[#d8ddd8] bg-white px-4 text-sm font-semibold shadow-sm hover:bg-[#fbfbf8] sm:flex-none"
+                            style={{
+                              color: saveMsg === "saved" ? "var(--accent)" : saveMsg === "error" ? "#b42318" : "var(--ink)",
+                              borderColor: saveMsg === "saved" ? "rgba(23,109,101,0.28)" : saveMsg === "error" ? "rgba(180,35,24,0.24)" : "var(--line)",
+                              background: saveMsg === "saved" ? "var(--accent-soft)" : "white",
+                            }}
+                          >
+                            <Icon name={saveMsg === "error" ? "close" : "check"} className="h-4 w-4" />
+                            {saving ? "Saving" : saveMsg === "saved" ? "Saved" : saveMsg === "error" ? "Retry" : "Save"}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Save trip changes</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            onClick={() => deleteTrip(activeTrip.id)}
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 rounded-md text-[#9f241b] hover:bg-red-50 hover:text-[#9f241b]"
+                            aria-label="Delete this trip"
+                          >
+                            <Icon name="trash" className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete this trip</TooltipContent>
+                      </Tooltip>
+                    </div>
                   </TooltipProvider>
                 </div>
                 {saveMsg === "error" && (
@@ -948,11 +1896,245 @@ export default function PlannerPage() {
                 </CardContent>
               </Card>
 
-              <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_370px]">
+              <div className="mt-4 grid gap-4 xl:grid-cols-[560px_minmax(0,1fr)] 2xl:grid-cols-[620px_minmax(0,1fr)]">
+                <Card className={`${mobileTab === "chat" ? "flex" : "hidden"} min-h-[620px] flex-col gap-0 overflow-hidden rounded-lg border bg-white py-0 xl:sticky xl:top-[82px] xl:flex xl:h-[calc(100vh-98px)]`} style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                  <CardHeader className="px-5 py-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-2xl font-semibold text-[var(--ink)]">
+                          Plan with TrailQuest
+                        </CardTitle>
+                        <p className="mt-2 text-lg leading-7" style={{ color: "var(--muted)" }}>
+                          How can I help plan this trip?
+                        </p>
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              onClick={resetPlannerChat}
+                              variant="outline"
+                              size="icon-lg"
+                              className="h-11 w-11 rounded-full border-[#d8ddd8] bg-white text-[var(--ink)] hover:bg-[var(--surface)]"
+                              aria-label="Reset chat"
+                            >
+                              <Icon name="refresh" className="h-5 w-5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Reset chat</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </CardHeader>
+                  <Separator className="bg-[var(--line)]" />
+                  <CardContent className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-5">
+                    {aiError && (
+                      <Alert variant="destructive" className="border-red-200 bg-red-50">
+                        <AlertTitle>Could not draft itinerary</AlertTitle>
+                        <AlertDescription>{aiError}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="flex min-h-[320px] flex-1 flex-col overflow-y-auto">
+                      <div className="space-y-3">
+                          {plannerMessages.map((message) => (
+                            <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                              <div
+                                className={`max-w-[88%] rounded-lg border px-3 py-2.5 text-sm leading-6 ${
+                                  message.role === "user"
+                                    ? "bg-[var(--ink)] text-white"
+                                    : "bg-[var(--surface)] text-[var(--ink-soft)]"
+                                }`}
+                                style={{
+                                  borderColor: message.role === "user" ? "var(--ink)" : "var(--line)",
+                                }}
+                              >
+                                {message.role === "assistant" ? (
+                                  (() => {
+                                    const formatted = formatAssistantMessage(message.text);
+                                    return (
+                                      <div className="space-y-3">
+                                        <p>{formatted.intro}</p>
+                                        {formatted.questions.length > 0 && (
+                                          <div className="grid gap-2">
+                                            {formatted.questions.map((question, index) => (
+                                              <div key={`${message.id}-q-${index}`} className="rounded-md border bg-white px-3 py-2" style={{ borderColor: "var(--line)" }}>
+                                                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
+                                                  Detail {index + 1}
+                                                </span>
+                                                <p className="mt-1 text-sm leading-5 text-[var(--ink-soft)]">{question}</p>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()
+                                ) : (
+                                  <p>{message.text}</p>
+                                )}
+                                {message.suggestions?.length ? (
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {message.suggestions.map((suggestion) => (
+                                      <Button
+                                        key={suggestion}
+                                        type="button"
+                                        onClick={() => void handlePlannerPrompt(suggestion)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 rounded-full bg-white px-3 text-xs font-semibold text-[var(--accent)]"
+                                      >
+                                        {suggestion}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                {message.parkOptions?.length ? (
+                                  <div className="mt-3 grid gap-2">
+                                    {message.parkOptions.map((park) => (
+                                      <Button
+                                        key={park.parkCode}
+                                        type="button"
+                                        onClick={() => void selectParkFromChat(park)}
+                                        variant="outline"
+                                        className="h-auto justify-start rounded-lg bg-white px-3 py-2 text-left text-[var(--ink)]"
+                                      >
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#edf5ef] text-[#1f7668]">
+                                          <Icon name="plus" className="h-4 w-4" />
+                                        </span>
+                                        <span className="min-w-0">
+                                          <span className="block truncate text-sm font-semibold">{park.fullName}</span>
+                                          <span className="block truncate text-xs text-[var(--muted)]">{park.states || "National Park Service"}</span>
+                                        </span>
+                                      </Button>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                {message.action === "draft" && (
+                                  <Button
+                                    type="button"
+                                    onClick={() => setMobileTab("chat")}
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-3 h-8 bg-white text-xs text-[var(--accent)]"
+                                  >
+                                    Continue in chat
+                                  </Button>
+                                )}
+                                {message.action === "apply" && aiResult && (
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    <Button
+                                      type="button"
+                                      onClick={() => setDraftDialogOpen(true)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 bg-white text-xs text-[var(--accent)]"
+                                    >
+                                      Review draft
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      onClick={applyItinerary}
+                                      size="sm"
+                                      className="h-8 bg-[var(--accent)] text-xs text-white hover:bg-[var(--accent)]/90"
+                                    >
+                                      <Icon name="check" className="h-3.5 w-3.5" />
+                                      Apply to planner
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      onClick={() => {
+                                        setAiResult(null);
+                                        setDraftDialogOpen(false);
+                                      }}
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 bg-white text-xs"
+                                    >
+                                      Discard
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                          {assistantThinking && !aiLoading && (
+                            <div className="flex justify-start">
+                              <div className="max-w-[88%] rounded-lg border bg-[var(--surface)] px-3 py-3 text-sm text-[var(--ink-soft)]" style={{ borderColor: "var(--line)" }}>
+                                <div className="flex items-center gap-3">
+                                  <div className="flex -space-x-1.5" aria-hidden="true">
+                                    {["🧭", "🥾", "🚗"].map((icon, index) => (
+                                      <span
+                                        key={icon}
+                                        className="flex h-7 w-7 items-center justify-center rounded-full border bg-white text-sm shadow-sm animate-pulse"
+                                        style={{
+                                          borderColor: "var(--line)",
+                                          animationDelay: `${index * 160}ms`,
+                                        }}
+                                      >
+                                        {icon}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <span className="font-medium">Reading your trip details...</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {aiLoading && (
+                            <div className="flex justify-start">
+                              <div className="w-full max-w-[88%] rounded-lg border bg-[var(--surface)] px-3 py-3 text-sm text-[var(--muted)]" style={{ borderColor: "var(--line)" }}>
+                                <div className="space-y-2">
+                                  {(planningSteps.length ? planningSteps : PLANNING_STEPS).map((step, index) => (
+                                    <div key={step.text} className="flex items-center gap-2">
+                                      <span className="w-6 text-base" aria-hidden="true">{step.icon}</span>
+                                      <span className={index === 0 ? "font-semibold text-[var(--ink)]" : ""}>{step.text}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                    </div>
+
+                    <form
+                      className="rounded-3xl bg-[var(--surface-soft)] p-2.5"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void handlePlannerPrompt(chatInput);
+                      }}
+                    >
+                      <Textarea
+                        value={chatInput}
+                        onChange={(event) => setChatInput(event.target.value)}
+                        placeholder="Tell TrailQuest where, when, and who’s going..."
+                        rows={2}
+                        className="planner-chat-textarea min-h-14 resize-none rounded-none border-0 bg-transparent px-3 py-2 text-base leading-6 text-[var(--ink)] shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+                        style={{ background: "transparent", boxShadow: "none" }}
+                      />
+                      <div className="flex items-center justify-end gap-2 px-1">
+                        <Button
+                          type="submit"
+                          disabled={!chatInput.trim() || assistantThinking || aiLoading}
+                          size="icon-lg"
+                          className="h-11 w-11 rounded-full bg-[var(--ink)] text-white opacity-100 hover:bg-[var(--ink)]/90 disabled:bg-[var(--ink)] disabled:text-white disabled:opacity-100"
+                          aria-label="Send message"
+                        >
+                          <Icon name="arrowUp" className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                <div className={`${mobileTab === "chat" ? "hidden" : "block"} min-w-0 xl:block`}>
+                  <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_370px]">
                 <section className="min-w-0 space-y-4">
                   <Card className={`${mobileTab === "plan" ? "block" : "hidden"} gap-0 overflow-visible rounded-lg border bg-white py-0 xl:block`} style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                     <CardHeader className="px-4 py-4 sm:px-5">
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-start">
+                    <div className={`grid gap-4 lg:items-start ${activeTrip.stops.length > 0 ? "lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]" : ""}`}>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
@@ -968,68 +2150,70 @@ export default function PlannerPage() {
                           )}
                         </div>
                         <CardTitle className="mt-1 text-2xl font-semibold text-[var(--ink)]">
-                          Route builder
+                          Live itinerary
                         </CardTitle>
                       </div>
-                      <Popover open={Boolean(parkSearch.trim())}>
-                        <PopoverAnchor asChild>
-                          <div className="relative w-full">
-                            <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
-                            <Input
-                              type="text"
-                              placeholder="Add a park stop..."
-                              value={parkSearch}
-                              onChange={(e) => setParkSearch(e.target.value)}
-                              className="h-11 rounded-lg border-[#d8ddd8] bg-[#fbfbf8] pl-10 pr-3 text-sm font-medium text-[var(--ink)]"
-                            />
-                          </div>
-                        </PopoverAnchor>
-                        <PopoverContent
-                          align="end"
-                          onOpenAutoFocus={(event) => event.preventDefault()}
-                          className="w-[min(92vw,30rem)] overflow-hidden rounded-lg border bg-white p-0"
-                          style={{ borderColor: "var(--line)" }}
-                        >
-                          <Command shouldFilter={false} className="rounded-lg bg-white">
-                            <CommandList>
-                              {searching && (
-                                <div className="space-y-2 p-3">
-                                  {[1, 2, 3].map((item) => (
-                                    <div key={item} className="flex items-center gap-3">
-                                      <Skeleton className="h-9 w-9 rounded-md bg-[var(--linen)]" />
-                                      <div className="flex-1 space-y-2">
-                                        <Skeleton className="h-3.5 w-3/4 bg-[var(--linen)]" />
-                                        <Skeleton className="h-3 w-1/3 bg-[var(--linen)]" />
+                      {activeTrip.stops.length > 0 && (
+                        <Popover open={Boolean(parkSearch.trim())}>
+                          <PopoverAnchor asChild>
+                            <div className="relative w-full">
+                              <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
+                              <Input
+                                type="text"
+                                placeholder="Add a park stop..."
+                                value={parkSearch}
+                                onChange={(e) => setParkSearch(e.target.value)}
+                                className="h-11 rounded-lg border-[#d8ddd8] bg-[#fbfbf8] pl-10 pr-3 text-sm font-medium text-[var(--ink)]"
+                              />
+                            </div>
+                          </PopoverAnchor>
+                          <PopoverContent
+                            align="end"
+                            onOpenAutoFocus={(event) => event.preventDefault()}
+                            className="w-[min(92vw,30rem)] overflow-hidden rounded-lg border bg-white p-0"
+                            style={{ borderColor: "var(--line)" }}
+                          >
+                            <Command shouldFilter={false} className="rounded-lg bg-white">
+                              <CommandList>
+                                {searching && (
+                                  <div className="space-y-2 p-3">
+                                    {[1, 2, 3].map((item) => (
+                                      <div key={item} className="flex items-center gap-3">
+                                        <Skeleton className="h-9 w-9 rounded-md bg-[var(--linen)]" />
+                                        <div className="flex-1 space-y-2">
+                                          <Skeleton className="h-3.5 w-3/4 bg-[var(--linen)]" />
+                                          <Skeleton className="h-3 w-1/3 bg-[var(--linen)]" />
+                                        </div>
                                       </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {!searching && parkResults.length === 0 && <CommandEmpty>No parks found.</CommandEmpty>}
-                              <CommandGroup heading="Add a stop">
-                                {parkResults.map((park) => (
-                                  <CommandItem
-                                    key={park.parkCode}
-                                    value={park.fullName}
-                                    onSelect={() => addStop(park)}
-                                    className="cursor-pointer rounded-md px-3 py-3"
-                                  >
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#edf5ef] text-[#1f7668]">
-                                      <Icon name="plus" className="h-4 w-4" />
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                      <span className="block truncate font-semibold">{park.fullName}</span>
-                                      <span className="mt-0.5 block text-xs text-muted-foreground">
-                                        {park.states || "National Park Service"}
+                                    ))}
+                                  </div>
+                                )}
+                                {!searching && parkResults.length === 0 && <CommandEmpty>No parks found.</CommandEmpty>}
+                                <CommandGroup heading="Add a stop">
+                                  {parkResults.map((park) => (
+                                    <CommandItem
+                                      key={park.parkCode}
+                                      value={park.fullName}
+                                      onSelect={() => addStop(park)}
+                                      className="cursor-pointer rounded-md px-3 py-3"
+                                    >
+                                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#edf5ef] text-[#1f7668]">
+                                        <Icon name="plus" className="h-4 w-4" />
                                       </span>
-                                    </span>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                                      <span className="min-w-0 flex-1">
+                                        <span className="block truncate font-semibold">{park.fullName}</span>
+                                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                                          {park.states || "National Park Service"}
+                                        </span>
+                                      </span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      )}
                     </div>
                     {aiError && (
                       <Alert variant="destructive" className="mt-4 border-red-200 bg-red-50">
@@ -1042,9 +2226,9 @@ export default function PlannerPage() {
                     <CardContent className="px-4 py-4 sm:px-5">
                     <div className="flex flex-col gap-3 rounded-lg border bg-[#fbfaf6] p-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--line)" }}>
                       <div>
-                        <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Draft from your stops</p>
+                        <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Plan comes from TrailQuest chat</p>
                         <p className="mt-0.5 text-xs leading-5" style={{ color: "var(--muted)" }}>
-                          Uses dates, stops, and packing context.
+                          Ask the assistant to create or revise the trip; edit the itinerary here after applying.
                         </p>
                       </div>
                       <Button
@@ -1053,103 +2237,29 @@ export default function PlannerPage() {
                         disabled={aiLoading || !activeTrip.stops.length}
                         variant={activeTrip.stops.length ? "default" : "outline"}
                         className={activeTrip.stops.length ? "h-10 bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90" : "h-10 bg-white text-[var(--muted)]"}
-                        title={!activeTrip.stops.length ? "Add at least one park stop first" : "Draft itinerary"}
+                        title={!activeTrip.stops.length ? "Describe the trip in chat first" : "Re-draft itinerary"}
                       >
                         {aiLoading ? (
                           <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.3"/><path d="M12 3a9 9 0 019 9"/></svg>
                         ) : (
                           <Icon name="route" className="h-4 w-4" />
                         )}
-                        {aiLoading ? "Drafting..." : "Draft itinerary"}
+                        {aiLoading ? "Drafting..." : "Re-draft"}
                       </Button>
                     </div>
 
                     {activeTrip.stops.length === 0 ? (
-                      <div className="mt-4 rounded-lg border bg-[var(--surface)] p-4" style={{ borderColor: "var(--line)" }}>
-                        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(260px,0.58fr)]">
-                          <div>
-                            <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>
-                              Start with the first park or stop.
-                            </p>
-                            <p className="mt-2 max-w-xl text-sm leading-6" style={{ color: "var(--muted)" }}>
-                              Search for a park, add your first stop, then build the days around drive time, permits, and weather.
-                            </p>
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              <Button
-                                type="button"
-                                onClick={() => setParkSearch("Yosemite")}
-                                variant="outline"
-                                className="h-10 bg-white"
-                              >
-                                Search parks
-                              </Button>
-                              <Button
-                                type="button"
-                                onClick={() => setParkSearch("Zion")}
-                                variant="outline"
-                                className="h-10 bg-white"
-                              >
-                                Try Zion
-                              </Button>
-                              <Button
-                                type="button"
-                                disabled
-                                variant="outline"
-                                className="h-10 bg-white"
-                              >
-                                Generate with AI
-                              </Button>
-                              <Button asChild variant="outline" className="h-10 bg-white text-[var(--accent)]">
-                                <Link href="/explore">Browse parks</Link>
-                              </Button>
-                            </div>
-                            <div className="mt-5 rounded-lg border bg-white p-3" style={{ borderColor: "var(--line)" }}>
-                              <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
-                                Before this trip is ready
-                              </p>
-                              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                {TRIP_READY_ITEMS.map((item) => {
-                                  const checked =
-                                    item === "Dates set" ? Boolean(activeTrip.startDate && activeTrip.endDate) :
-                                      item === "First stop added" ? activeTrip.stops.length > 0 :
-                                        item === "Notes added" ? Boolean(activeTrip.notes.trim()) :
-                                          false;
-                                  return (
-                                    <div key={item} className="flex items-center gap-2 text-sm" style={{ color: checked ? "var(--ink)" : "var(--muted)" }}>
-                                      <span
-                                        className="flex h-4 w-4 shrink-0 items-center justify-center rounded border"
-                                        style={{ borderColor: checked ? "var(--accent)" : "var(--line)", background: checked ? "var(--accent)" : "white", color: "white" }}
-                                      >
-                                        {checked && <Icon name="check" className="h-3 w-3" />}
-                                      </span>
-                                      {item}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="rounded-lg border bg-white p-3" style={{ borderColor: "var(--line)" }}>
-                            <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>
-                              Route timeline
-                            </p>
-                            <div className="mt-3 space-y-3">
-                              {EMPTY_ROUTE_DAYS.map(([day, ...items]) => (
-                                <div key={day} className="rounded-lg border p-3" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.72)" }}>
-                                  <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{day}</p>
-                                  <div className="mt-2 space-y-1.5">
-                                    {items.map((item) => (
-                                      <div key={item} className="flex items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
-                                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--line)" }} />
-                                        {item}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
+                      <div className="mt-4 flex min-h-[180px] flex-col items-center justify-center rounded-lg border px-4 py-8 text-center sm:min-h-[220px]" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.7)" }}>
+                        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent)]">
+                          <Icon name="message" className="h-5 w-5" />
+                        </span>
+                        <p className="mt-3 text-sm font-semibold text-[var(--ink)]">Start in TrailQuest chat</p>
+                        <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--muted)]">
+                          Describe the full trip in chat. After you apply the draft, the itinerary, dates, stops, map, and notes appear here.
+                        </p>
+                        <Button type="button" onClick={() => setMobileTab("chat")} variant="outline" className="mt-4 h-9 bg-white text-[var(--accent)] xl:hidden">
+                          Open chat
+                        </Button>
                       </div>
                     ) : (
                       <div className="relative mt-4 space-y-3">
@@ -1157,9 +2267,9 @@ export default function PlannerPage() {
                         <TooltipProvider>
                         {activeTrip.stops.map((stop, i) => (
                           <Card key={stop.id} className="relative gap-0 overflow-visible rounded-lg border bg-white py-0" style={{ borderColor: "var(--line)", boxShadow: "0 10px 28px rgba(17,19,21,0.04)" }}>
-                            <CardContent className="grid gap-3 p-3 sm:grid-cols-[44px_minmax(0,1fr)_auto] sm:p-4">
+                            <CardContent className="grid gap-3 p-3 sm:grid-cols-[38px_minmax(0,1fr)_auto] sm:p-4">
                             <div
-                              className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white"
+                              className="z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white"
                               style={{ background: i === 0 ? "var(--accent)" : "#2f3a34" }}
                             >
                               {i + 1}
@@ -1185,11 +2295,8 @@ export default function PlannerPage() {
                                     style={{ color: "var(--ink)" }}
                                   />
                                 </Badge>
-                                <Badge variant="outline" className="rounded-md border-[#d7e2dc] bg-[#f1f7f3] text-[#356b5a]">
-                                  Planned
-                                </Badge>
                               </div>
-                              <Separator className="mt-3 bg-[var(--line)]" />
+                              <Separator className="mt-3 bg-[var(--line)]/80" />
                               {editingStopId === stop.id || !stop.notes ? (
                                 <Textarea
                                   autoFocus={editingStopId === stop.id}
@@ -1201,7 +2308,7 @@ export default function PlannerPage() {
                                   className="mt-3 min-h-24 w-full resize-none rounded-lg border-[#cfded7] bg-[#fbfbf8] px-3 py-2 text-sm leading-6 text-[var(--ink-soft)]"
                                 />
                               ) : (
-                                <div className="mt-3 cursor-text rounded-lg border bg-[#fbfbf8] px-3 py-2.5" style={{ borderColor: "var(--line)" }} onClick={() => setEditingStopId(stop.id)}>
+                                <div className="mt-3 cursor-text rounded-md px-1 py-1" onClick={() => setEditingStopId(stop.id)}>
                                   {(() => {
                                     const [activitiesPart, tip] = stop.notes.split(" — ");
                                     const activities = activitiesPart.split(" · ").map(s => s.trim()).filter(Boolean);
@@ -1210,19 +2317,37 @@ export default function PlannerPage() {
                                       return <p className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>{stop.notes}</p>;
                                     }
                                     return (
-                                      <div className="space-y-2">
-                                        <div className="space-y-1.5">
+                                      <div className="space-y-3">
+                                        <div className="space-y-0.5">
                                           {activities.map((act, ai) => (
-                                            <div key={ai} className="flex items-start gap-2">
-                                              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#1f7668]" />
-                                              <span className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>{act}</span>
+                                            <div key={ai} className="grid gap-1 rounded-md py-1.5 sm:grid-cols-[6.25rem_14px_minmax(0,1fr)] sm:gap-2">
+                                              {(() => {
+                                                const timed = parseTimedActivity(act);
+                                                return (
+                                                  <>
+                                                    {timed.time ? (
+                                                      <span className="text-[11px] font-semibold uppercase leading-4 text-[#1f7668] sm:text-xs sm:normal-case sm:leading-5">
+                                                        {timed.time}
+                                                      </span>
+                                                    ) : (
+                                                      <span className="hidden sm:block" />
+                                                    )}
+                                                    <span className="relative hidden h-full justify-center sm:flex">
+                                                      <span className="mt-2 h-2 w-2 rounded-full bg-[#1f7668]" />
+                                                      {ai < activities.length - 1 && <span className="absolute bottom-[-10px] top-5 w-px bg-[#d9e3dd]" />}
+                                                    </span>
+                                                    <span className="text-sm leading-5" style={{ color: "var(--ink-soft)" }}>{timed.label}</span>
+                                                  </>
+                                                );
+                                              })()}
                                             </div>
                                           ))}
                                         </div>
                                         {tip && (
-                                          <p className="rounded-md bg-[#eaf3ed] px-3 py-2 text-xs leading-5 text-[#1f7668]">
-                                            Tip: {tip}
-                                          </p>
+                                          <div className="rounded-md border-l-2 border-[#1f7668] bg-[#f2f7f4] px-3 py-2">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1f7668]">Guide note</p>
+                                            <p className="mt-1 text-xs leading-5 text-[#356b5a]">{tip}</p>
+                                          </div>
                                         )}
                                       </div>
                                     );
@@ -1256,11 +2381,24 @@ export default function PlannerPage() {
 
                   {/* Route map — only shown when stops have coordinates */}
                   {(() => {
-                    const mapped: StopCoord[] = activeTrip.stops
+                    const mappedStops = activeTrip.stops
                       .filter((s): s is TripStop & { lat: number; lng: number } =>
                         typeof s.lat === "number" && typeof s.lng === "number"
-                      )
-                      .map((s) => ({ id: s.id, parkName: s.parkName, day: s.day, notes: s.notes, lat: s.lat, lng: s.lng }));
+                      );
+                    const uniqueMappedStops = mappedStops.filter((stop, index, stops) => {
+                      const key = stop.parkCode.startsWith("travel-day")
+                        ? ""
+                        : `${stop.parkCode || normalizeParkName(stop.parkName)}:${stop.lat.toFixed(4)},${stop.lng.toFixed(4)}`;
+                      if (!key) return false;
+                      return stops.findIndex((candidate) => {
+                        const candidateKey = candidate.parkCode.startsWith("travel-day")
+                          ? ""
+                          : `${candidate.parkCode || normalizeParkName(candidate.parkName)}:${candidate.lat.toFixed(4)},${candidate.lng.toFixed(4)}`;
+                        return candidateKey === key;
+                      }) === index;
+                    });
+                    const mapped: StopCoord[] = uniqueMappedStops
+                      .map((s, index) => ({ id: s.id, parkName: s.parkName, day: index + 1, notes: s.notes, lat: s.lat, lng: s.lng }));
                     if (mapped.length === 0) {
                       return (
                         <Card className={`${mobileTab === "map" ? "block" : "hidden"} border bg-white xl:hidden`} style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
@@ -1287,7 +2425,7 @@ export default function PlannerPage() {
                             <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15"/><path d="M15 6v15"/>
                           </svg>
                           <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>Route Map</p>
-                          <span className="ml-auto text-xs font-medium" style={{ color: "var(--muted)" }}>{mapped.length} {mapped.length === 1 ? "stop" : "stops"}</span>
+                          <span className="ml-auto text-xs font-medium" style={{ color: "var(--muted)" }}>{mapped.length} {mapped.length === 1 ? "park" : "parks"}</span>
                         </div>
                         <TripMap stops={mapped} />
                       </section>
@@ -1297,40 +2435,65 @@ export default function PlannerPage() {
 
                 <aside className={`${mobileTab === "notes" ? "block" : "hidden"} space-y-4 xl:sticky xl:top-[82px] xl:block xl:self-start`}>
                   <Card className="gap-0 overflow-hidden border bg-white py-0" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
-                    <CardHeader className="px-4 py-4">
+                    <CardHeader className="px-4 py-3">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
                             <Icon name="check" className="h-4 w-4" />
                             Packing
                           </p>
-                          <CardTitle className="mt-1 text-xl text-[var(--ink)]">Review before you leave</CardTitle>
+                          <CardTitle className="mt-1 text-lg text-[var(--ink)]">TrailQuest checklist</CardTitle>
                           <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
                             {packedCount} of {packingList.length} packed
                           </p>
                         </div>
-                        <Badge variant="outline" className="rounded-md border-[var(--line)] bg-[var(--accent-soft)] text-[var(--accent)]">
-                          {packingList.length} items
-                        </Badge>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <Badge variant="outline" className="rounded-md border-[var(--line)] bg-[var(--accent-soft)] text-[var(--accent)]">
+                            {packingList.length} items
+                          </Badge>
+                          {suggestedPacking.length > 0 && (
+                            <span className="text-[11px] font-medium" style={{ color: "var(--muted)" }}>
+                              {suggestedPacking.length} from chat
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-soft)]">
+                        <div
+                          className="h-full rounded-full bg-[var(--accent)] transition-all"
+                          style={{ width: `${packingList.length ? Math.round((packedCount / packingList.length) * 100) : 0}%` }}
+                        />
                       </div>
                     </CardHeader>
                     <Separator className="bg-[var(--line)]" />
-                    <CardContent className="max-h-[420px] overflow-y-auto px-4 py-2">
+                    <CardContent className="max-h-[340px] overflow-y-auto px-3 py-1">
                       <Accordion type="multiple" defaultValue={showChecklist ? groupPackingItems(packingList).map(([category]) => category) : []} onValueChange={(items) => setShowChecklist(items.length > 0)}>
                         {groupPackingItems(packingList).map(([category, items]) => (
                           <AccordionItem key={category} value={category} className="border-[var(--line)]">
-                            <AccordionTrigger className="py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)] hover:no-underline">
-                              {category}
+                            <AccordionTrigger className="rounded-md px-1 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)] hover:no-underline">
+                              <span className="flex items-center gap-2">
+                                {category}
+                                <span className="text-[10px] font-medium tracking-normal text-[var(--muted)]">
+                                  {items.length}
+                                </span>
+                              </span>
                             </AccordionTrigger>
-                            <AccordionContent className="space-y-1 pb-3">
+                            <AccordionContent className="h-auto space-y-1 pb-2">
                               {items.map((item) => (
-                                <label key={item} className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-stone-50">
+                                <label
+                                  key={item}
+                                  className={`flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-stone-50 ${
+                                    suggestedPacking.some((suggested) => suggested.toLowerCase() === item.toLowerCase())
+                                      ? "bg-[var(--accent-soft)]/45"
+                                      : ""
+                                  }`}
+                                >
                                   <Checkbox
                                     checked={packedItems.includes(item)}
                                     onCheckedChange={(checked) => togglePackedItem(item, checked === true)}
-                                    className="mt-1 border-[var(--line)] data-checked:border-[var(--accent)] data-checked:bg-[var(--accent)]"
+                                    className="mt-0.5 h-4 w-4 border-[var(--line)] data-checked:border-[var(--accent)] data-checked:bg-[var(--accent)]"
                                   />
-                                  <span className="text-sm leading-6" style={{ color: "var(--ink-soft)" }}>
+                                  <span className="text-sm leading-5" style={{ color: "var(--ink-soft)" }}>
                                     {item}
                                   </span>
                                 </label>
@@ -1342,31 +2505,36 @@ export default function PlannerPage() {
                     </CardContent>
                   </Card>
 
-                  <div className="rounded-lg border bg-white p-4" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
+                  <div className="rounded-lg border bg-white p-3.5" style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}>
                     <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
                       <Icon name="note" className="h-4 w-4" />
                       Notes
                     </p>
-                    <h3 className="mt-1 text-2xl font-semibold" style={{ color: "var(--ink)" }}>
+                    <h3 className="mt-1 text-lg font-semibold" style={{ color: "var(--ink)" }}>
                       Trip notes
                     </h3>
+                    <p className="mt-1 text-xs leading-5" style={{ color: "var(--muted)" }}>
+                      Private reminders only. Chat history stays in the assistant panel.
+                    </p>
                     <Textarea
                       value={activeTrip.notes}
                       onChange={(e) => updateTrip({ ...activeTrip, notes: e.target.value })}
-                      placeholder="Reservations, permit numbers, route reminders..."
-                      rows={8}
-                      className="mt-4 min-h-48 w-full resize-none rounded-lg border-[var(--line)] bg-white px-3 py-3 text-sm leading-6 text-[var(--ink)]"
-                      style={{ borderColor: "var(--line)", color: "var(--ink)", background: "white" }}
+                      placeholder="Permits, reservations, lodging, route reminders..."
+                      rows={4}
+                      className="mt-3 min-h-28 w-full resize-none rounded-lg border-[var(--line)] bg-[#fbfbf8] px-3 py-2.5 text-sm leading-5 text-[var(--ink)] shadow-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/15"
+                      style={{ borderColor: "var(--line)", color: "var(--ink)" }}
                     />
                   </div>
                 </aside>
+              </div>
+                </div>
               </div>
             </>
           )}
         </main>
       </div>
 
-      <Dialog open={Boolean(aiResult)} onOpenChange={(open) => !open && setAiResult(null)}>
+      <Dialog open={draftDialogOpen && Boolean(aiResult)} onOpenChange={setDraftDialogOpen}>
         {aiResult && (
           <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden rounded-xl bg-white p-0 sm:max-w-2xl" style={{ boxShadow: "0 32px 80px rgba(17,19,21,0.24)" }}>
             {/* Header */}
@@ -1397,18 +2565,36 @@ export default function PlannerPage() {
                       <p className="text-xs" style={{ color: "var(--muted)" }}>{day.parkName}</p>
                     </div>
                   </div>
-                  <ul className="space-y-1.5 mb-3">
+                  <ul className="mb-3 space-y-0.5">
                     {day.activities.map((act, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm" style={{ color: "var(--ink-soft)" }}>
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
-                        {act}
+                      <li key={i} className="grid gap-1 rounded-md py-1.5 text-sm sm:grid-cols-[6.25rem_14px_minmax(0,1fr)] sm:gap-2" style={{ color: "var(--ink-soft)" }}>
+                        {(() => {
+                          const timed = parseTimedActivity(act);
+                          return (
+                            <>
+                              {timed.time ? (
+                                <span className="text-[11px] font-semibold uppercase leading-4 text-[#1f7668] sm:text-xs sm:normal-case sm:leading-5">
+                                  {timed.time}
+                                </span>
+                              ) : (
+                                <span className="hidden sm:block" />
+                              )}
+                              <span className="relative hidden h-full justify-center sm:flex">
+                                <span className="mt-2 h-2 w-2 rounded-full bg-[#1f7668]" />
+                                {i < day.activities.length - 1 && <span className="absolute bottom-[-10px] top-5 w-px bg-[#d9e3dd]" />}
+                              </span>
+                              <span className="leading-5">{timed.label}</span>
+                            </>
+                          );
+                        })()}
                       </li>
                     ))}
                   </ul>
                   {day.tip && (
-                    <p className="rounded-lg px-3 py-2 text-xs leading-5" style={{ background: "rgba(23,109,101,0.07)", color: "var(--accent)" }}>
-                      💡 {day.tip}
-                    </p>
+                    <div className="rounded-md border-l-2 border-[#1f7668] bg-[#f2f7f4] px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1f7668]">Guide note</p>
+                      <p className="mt-1 text-xs leading-5 text-[#356b5a]">{day.tip}</p>
+                    </div>
                   )}
                 </div>
               ))}
@@ -1429,14 +2615,28 @@ export default function PlannerPage() {
 
             {/* Footer */}
             <DialogFooter className="mx-0 mb-0 flex-row items-center justify-between gap-3 rounded-none border-t bg-white px-6 py-4" style={{ borderColor: "var(--line)" }}>
-              <Button
-                type="button"
-                onClick={() => setAiResult(null)}
-                variant="ghost"
-                className="text-[var(--muted)]"
-              >
-                Discard
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setAiResult(null);
+                    setDraftDialogOpen(false);
+                  }}
+                  variant="ghost"
+                  className="text-[var(--muted)]"
+                >
+                  Discard
+                </Button>
+                <Button
+                  type="button"
+                  onClick={reviseDraftInChat}
+                  variant="outline"
+                  className="bg-white text-[var(--accent)]"
+                >
+                  <Icon name="message" className="h-4 w-4" />
+                  Ask for changes
+                </Button>
+              </div>
               <Button
                 type="button"
                 onClick={applyItinerary}
@@ -1508,6 +2708,13 @@ function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: str
   };
 
   switch (name) {
+    case "arrowUp":
+      return (
+        <svg {...common}>
+          <path d="M12 19V5" />
+          <path d="m5 12 7-7 7 7" />
+        </svg>
+      );
     case "calendar":
       return (
         <svg {...common}>
@@ -1544,6 +2751,14 @@ function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: str
           <path d="M15 6v15" />
         </svg>
       );
+    case "message":
+      return (
+        <svg {...common}>
+          <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />
+          <path d="M8 9h8" />
+          <path d="M8 13h5" />
+        </svg>
+      );
     case "note":
       return (
         <svg {...common}>
@@ -1551,6 +2766,13 @@ function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: str
           <path d="M14 2v6h6" />
           <path d="M8 13h8" />
           <path d="M8 17h6" />
+        </svg>
+      );
+    case "panel":
+      return (
+        <svg {...common}>
+          <rect width="18" height="18" x="3" y="3" rx="4" />
+          <path d="M9 3v18" />
         </svg>
       );
     case "plus":
@@ -1566,6 +2788,13 @@ function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: str
           <path d="M6 9V2h12v7" />
           <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
           <path d="M6 14h12v8H6z" />
+        </svg>
+      );
+    case "refresh":
+      return (
+        <svg {...common}>
+          <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+          <path d="M21 3v6h-6" />
         </svg>
       );
     case "route":

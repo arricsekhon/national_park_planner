@@ -17,11 +17,13 @@ export interface StopCoord {
 function FitBounds({ positions }: { positions: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
+    const resizeFrame = window.requestAnimationFrame(() => map.invalidateSize());
     if (positions.length > 1) {
       map.fitBounds(L.latLngBounds(positions), { padding: [48, 48] });
     } else if (positions.length === 1) {
       map.setView(positions[0], 8);
     }
+    return () => window.cancelAnimationFrame(resizeFrame);
   }, [map, positions]);
   return null;
 }
@@ -47,42 +49,44 @@ export default function TripMap({ stops }: { stops: StopCoord[] }) {
   ];
 
   return (
-    <MapContainer
-      center={center}
-      zoom={5}
-      style={{ height: "400px", width: "100%", borderRadius: "12px" }}
-      scrollWheelZoom={false}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <FitBounds positions={positions} />
-
-      {positions.length > 1 && (
-        <Polyline
-          positions={positions}
-          pathOptions={{ color: "#176d65", weight: 3, dashArray: "10 7", opacity: 0.85 }}
+    <div className="relative z-0 overflow-hidden rounded-lg bg-[#eef1e9]">
+      <MapContainer
+        center={center}
+        zoom={5}
+        className="trailquest-trip-map h-[220px] w-full sm:h-[260px] xl:h-[280px]"
+        scrollWheelZoom={false}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-      )}
+        <FitBounds positions={positions} />
 
-      {stops.map((stop, i) => (
-        <Marker key={stop.id} position={[stop.lat, stop.lng]} icon={makeIcon(i + 1, i === 0)}>
-          <Popup>
-            <div style={{ minWidth: 170, fontFamily: "system-ui, sans-serif" }}>
-              <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 3, color: "#111315" }}>
-                {stop.parkName}
-              </p>
-              <p style={{ fontSize: 12, color: "#176d65", fontWeight: 600, marginBottom: 4 }}>
-                Day {stop.day}
-              </p>
-              {stop.notes && (
-                <p style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{stop.notes}</p>
-              )}
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-    </MapContainer>
+        {positions.length > 1 && (
+          <Polyline
+            positions={positions}
+            pathOptions={{ color: "#176d65", weight: 3, dashArray: "10 7", opacity: 0.85 }}
+          />
+        )}
+
+        {stops.map((stop, i) => (
+          <Marker key={stop.id} position={[stop.lat, stop.lng]} icon={makeIcon(i + 1, i === 0)}>
+            <Popup>
+              <div style={{ minWidth: 170, fontFamily: "system-ui, sans-serif" }}>
+                <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 3, color: "#111315" }}>
+                  {stop.parkName}
+                </p>
+                <p style={{ fontSize: 12, color: "#176d65", fontWeight: 600, marginBottom: 4 }}>
+                  Day {stop.day}
+                </p>
+                {stop.notes && (
+                  <p style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{stop.notes}</p>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
   );
 }

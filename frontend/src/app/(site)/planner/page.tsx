@@ -2682,32 +2682,32 @@ export default function PlannerPage() {
 
       <Dialog open={draftDialogOpen && Boolean(aiResult)} onOpenChange={setDraftDialogOpen}>
         {aiResult && (
-          <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden rounded-xl bg-white p-0 sm:max-w-2xl" style={{ boxShadow: "0 32px 80px rgba(17,19,21,0.24)" }}>
+          <DialogContent className="flex max-h-[92dvh] max-w-[calc(100vw-1rem)] grid-rows-none flex-col overflow-hidden rounded-xl bg-white p-0 sm:max-h-[85vh] sm:max-w-2xl" style={{ boxShadow: "0 32px 80px rgba(17,19,21,0.24)" }}>
             {/* Header */}
-            <DialogHeader className="border-b px-6 py-5 pr-14" style={{ borderColor: "var(--line)" }}>
+            <DialogHeader className="shrink-0 border-b px-4 py-4 pr-12 sm:px-6 sm:py-5 sm:pr-14" style={{ borderColor: "var(--line)" }}>
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>AI Generated</p>
                 </div>
-                <DialogTitle className="text-xl font-semibold" style={{ color: "var(--ink)" }}>Your Itinerary</DialogTitle>
-                <DialogDescription className="mt-1 text-sm" style={{ color: "var(--muted)" }}>{aiResult.summary}</DialogDescription>
+                <DialogTitle className="text-xl font-semibold leading-tight sm:text-2xl" style={{ color: "var(--ink)" }}>Your Itinerary</DialogTitle>
+                <DialogDescription className="mt-1 text-sm leading-6 sm:text-base" style={{ color: "var(--muted)" }}>{aiResult.summary}</DialogDescription>
               </div>
             </DialogHeader>
 
             {/* Days */}
-            <div className="max-h-[56vh] overflow-y-auto px-6 py-4 space-y-3">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-5 sm:px-6">
               {aiResult.days.map((day) => (
-                <div key={day.day} className="rounded-xl border p-4" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.7)" }}>
-                  <div className="flex items-center gap-3 mb-3">
+                <div key={day.day} className="rounded-lg border p-3 sm:p-4" style={{ borderColor: "var(--line)", background: "rgba(251,251,248,0.7)" }}>
+                  <div className="mb-3 flex items-start gap-3">
                     <span
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
                       style={{ background: day.day === 1 ? "var(--accent)" : "var(--ink)" }}
                     >
                       {day.day}
                     </span>
-                    <div>
-                      <p className="font-semibold text-sm" style={{ color: "var(--ink)" }}>{day.label}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold leading-5" style={{ color: "var(--ink)" }}>{day.label}</p>
                       <p className="text-xs" style={{ color: "var(--muted)" }}>{day.parkName}</p>
                     </div>
                   </div>
@@ -2746,11 +2746,11 @@ export default function PlannerPage() {
               ))}
 
               {aiResult.packingAdditions?.length > 0 && (
-                <div className="rounded-xl border p-4" style={{ borderColor: "var(--line)" }}>
+                <div className="rounded-lg border p-3 sm:p-4" style={{ borderColor: "var(--line)" }}>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] mb-2" style={{ color: "var(--muted)" }}>Also pack</p>
                   <div className="flex flex-wrap gap-2">
                     {aiResult.packingAdditions.map((item) => (
-                      <span key={item} className="rounded-full px-3 py-1 text-xs font-medium" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+                      <span key={item} className="max-w-full rounded-md px-2.5 py-1 text-xs font-medium leading-5" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
                         {item}
                       </span>
                     ))}
@@ -2760,8 +2760,8 @@ export default function PlannerPage() {
             </div>
 
             {/* Footer */}
-            <DialogFooter className="mx-0 mb-0 flex-row items-center justify-between gap-3 rounded-none border-t bg-white px-6 py-4" style={{ borderColor: "var(--line)" }}>
-              <div className="flex flex-wrap gap-2">
+            <DialogFooter className="mx-0 mb-0 flex-col-reverse gap-2 rounded-none border-t bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:py-4" style={{ borderColor: "var(--line)", boxShadow: "0 -10px 24px rgba(17,19,21,0.06)" }}>
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
                 <Button
                   type="button"
                   onClick={() => {
@@ -2769,7 +2769,7 @@ export default function PlannerPage() {
                     setDraftDialogOpen(false);
                   }}
                   variant="ghost"
-                  className="text-[var(--muted)]"
+                  className="h-10 text-[var(--muted)]"
                 >
                   Discard
                 </Button>
@@ -2777,16 +2777,16 @@ export default function PlannerPage() {
                   type="button"
                   onClick={reviseDraftInChat}
                   variant="outline"
-                  className="bg-white text-[var(--accent)]"
+                  className="h-10 bg-white text-[var(--accent)]"
                 >
                   <Icon name="message" className="h-4 w-4" />
-                  Ask for changes
+                  <span className="truncate">Ask for changes</span>
                 </Button>
               </div>
               <Button
                 type="button"
                 onClick={applyItinerary}
-                className="bg-[var(--ink)] text-white shadow-[0_8px_24px_rgba(17,19,21,0.16)] hover:bg-[var(--ink)]/90"
+                className="h-11 w-full bg-[var(--ink)] text-white shadow-[0_8px_24px_rgba(17,19,21,0.16)] hover:bg-[var(--ink)]/90 sm:w-auto"
               >
                 <Icon name="check" className="h-4 w-4" />
                 Apply to planner

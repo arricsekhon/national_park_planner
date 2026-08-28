@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const ITINERARY_MODEL = "claude-sonnet-5";
+const ITINERARY_MODELS = ["claude-sonnet-5", "claude-haiku-4-5-20251001"] as const;
 const JSON_REPAIR_MODEL = "claude-haiku-4-5-20251001";
 
 const SYSTEM_PROMPT = `You are TrailQuest's senior national park itinerary planner. Given parks, travel dates, trip length, and planning context collected by a separate follow-up agent, generate a practical day-by-day itinerary that feels specific, useful, and safe.
@@ -68,6 +68,26 @@ async function repairItineraryJson(client: Anthropic, raw: string): Promise<unkn
   return JSON.parse(extractJsonObject(repaired));
 }
 
+async function createItineraryMessage(client: Anthropic, userMessage: string) {
+  let lastError: unknown = null;
+
+  for (const model of ITINERARY_MODELS) {
+    try {
+      return await client.messages.create({
+        model,
+        max_tokens: model.includes("sonnet") ? 4096 : 2048,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userMessage }],
+      });
+    } catch (err) {
+      lastError = err;
+      console.warn(`[generate-itinerary] ${model} failed; trying fallback if available`, err);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("All itinerary models failed");
+}
+
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY is not configured." }, { status: 500 });
@@ -96,12 +116,7 @@ ${startDate ? `Travel dates: ${startDate} to ${endDate || "TBD"}.` : ""}
 ${planningContext ? `Trip planning context and revision notes:\n${planningContext}\nUse this context for seasonal weather assumptions, road access, driving pace, lodging fit, traveler needs, safety notes, packing additions, and requested changes to any current draft.` : ""}
 Spread the parks across the available days. If there are more days than parks, give popular parks extra days.`;
 
-    const message = await client.messages.create({
-      model: ITINERARY_MODEL,
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
-    });
+    const message = await createItineraryMessage(client, userMessage);
 
     const raw = message.content[0].type === "text" ? message.content[0].text : "";
 
@@ -116,7 +131,7 @@ Spread the parks across the available days. If there are more days than parks, g
   } catch (err) {
     console.error("[generate-itinerary]", err);
     return NextResponse.json(
-      { error: "Failed to generate itinerary. Check your API key." },
+      { error: "Could not generate the itinerary right now. Try again in a minute, or revise the trip details and draft again." },
       { status: 500 }
     );
   }

@@ -1,18 +1,26 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const SYSTEM_PROMPT = `You are an expert national park trip planner. Given a list of parks, travel dates, and trip length, generate a practical day-by-day itinerary.
+const ITINERARY_MODEL = "claude-sonnet-5";
+const JSON_REPAIR_MODEL = "claude-haiku-4-5-20251001";
+
+const SYSTEM_PROMPT = `You are TrailQuest's senior national park itinerary planner. Given parks, travel dates, trip length, and planning context collected by a separate follow-up agent, generate a practical day-by-day itinerary that feels specific, useful, and safe.
 
 Rules:
-- Assign parks to specific days based on trip length
+- Generate exactly the requested number of days
+- Assign parks to specific days based on trip length, route order, driving time, and user focus
 - Use ONLY the parks provided by the user as park destinations
 - Do not add unrelated national parks, historic sites, monuments, or waypoint stops
 - For travel-only days, set parkName to "Travel Day"
-- Each day has 2–4 specific activities (real trail names, viewpoints, visitor centers)
+- Each day has 3–5 specific activities, unless it is a long driving day
+- Activities should include real trail names, viewpoints, visitor centers, scenic drives, meals/rest breaks, check-in/check-out, and return drive segments when relevant
 - Every activity must start with a practical time window, for example "6:00-7:30 AM - Depart San Francisco" or "9:00-11:00 AM - Navajo Loop Trail"
 - Use the user's preferred departure time for driving days when provided
+- Include realistic pacing, buffers, early starts for heat/parking, and lower-effort alternatives when the user mentions family, kids, seniors, easy pace, weather, or road concerns
 - Match activities to the user's requested trip focus, such as hikes only, scenic spots only, both, family-friendly, or photography
-- Include a short practical tip per day (permits, parking, timing)
+- Tips must be concrete and contextual: permits/reservations, shuttle rules, seasonal road access, heat/cold, elevation, daylight, parking, water, footwear, and safety
+- Packing additions must be specific to the selected parks, dates/season, travel mode, and planned activities
+- Avoid generic filler such as "enjoy the scenery" or "bring comfortable shoes" unless made specific
 - Keep each timed activity concise
 - Return ONLY valid JSON, no markdown, no prose outside JSON
 - Every object key and string value must be wrapped in double quotes
@@ -46,7 +54,7 @@ function extractJsonObject(raw: string): string {
 
 async function repairItineraryJson(client: Anthropic, raw: string): Promise<unknown> {
   const repair = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: JSON_REPAIR_MODEL,
     max_tokens: 2048,
     system: "Repair invalid JSON. Return ONLY valid JSON. Do not add markdown or commentary.",
     messages: [
@@ -89,8 +97,8 @@ ${planningContext ? `Trip planning context and revision notes:\n${planningContex
 Spread the parks across the available days. If there are more days than parks, give popular parks extra days.`;
 
     const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 2048,
+      model: ITINERARY_MODEL,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMessage }],
     });

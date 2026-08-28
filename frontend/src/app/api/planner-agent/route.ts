@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
+const PLANNER_AGENT_MODEL = "claude-haiku-4-5-20251001";
+
 const SYSTEM_PROMPT = `You are TrailQuest's trip planning agent.
 
 Decide whether the user gave enough information to draft a national park trip.
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest) {
     };
 
     const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+      model: PLANNER_AGENT_MODEL,
       max_tokens: 700,
       system: SYSTEM_PROMPT,
       messages: [

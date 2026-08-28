@@ -123,6 +123,7 @@ type IconName =
 const STORAGE_KEY = "trailquest_trips";
 const PACKED_STORAGE_KEY = "trailquest_packed_items";
 const SUGGESTED_PACKING_STORAGE_KEY = "trailquest_suggested_packing";
+const CHAT_STORAGE_PREFIX = "trailquest_chat_messages";
 const DAY_MS = 86400000;
 const TRIP_STARTERS = [
   {
@@ -772,6 +773,51 @@ function saveSuggestedPacking(items: Record<string, string[]>) {
   localStorage.setItem(SUGGESTED_PACKING_STORAGE_KEY, JSON.stringify(items));
 }
 
+function chatStorageKey(tripId: string): string {
+  return `${CHAT_STORAGE_PREFIX}:${tripId}`;
+}
+
+function toStoredPlannerMessage(message: PlannerMessage): PlannerMessage {
+  return {
+    id: message.id,
+    role: message.role,
+    text: message.text,
+    action: message.action,
+  };
+}
+
+function normalizePlannerMessages(messages: PlannerMessage[]): PlannerMessage[] {
+  if (!messages.length) return INITIAL_PLANNER_MESSAGES;
+  const hasWelcome = messages.some((message) => message.text === INITIAL_PLANNER_MESSAGES[0].text);
+  return hasWelcome ? messages : [...INITIAL_PLANNER_MESSAGES, ...messages];
+}
+
+function loadLocalTripChat(tripId: string): PlannerMessage[] {
+  if (typeof window === "undefined") return INITIAL_PLANNER_MESSAGES;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(chatStorageKey(tripId)) ?? "[]") as PlannerMessage[];
+    return normalizePlannerMessages(
+      parsed.filter((message) =>
+        message
+        && (message.role === "assistant" || message.role === "user")
+        && typeof message.text === "string"
+      )
+    );
+  } catch {
+    return INITIAL_PLANNER_MESSAGES;
+  }
+}
+
+function saveLocalTripChat(tripId: string, messages: PlannerMessage[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(chatStorageKey(tripId), JSON.stringify(messages.map(toStoredPlannerMessage)));
+}
+
+function deleteLocalTripChat(tripId: string) {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(chatStorageKey(tripId));
+}
+
 function uniqueItems(items: string[]): string[] {
   const seen = new Set<string>();
   return items.filter((item) => {
@@ -822,6 +868,7 @@ export default function PlannerPage() {
   const [tripIntent, setTripIntent] = useState<TripIntent>({});
   const [planningSteps, setPlanningSteps] = useState<PlanningStep[]>([]);
   const [tripsRailOpen, setTripsRailOpen] = useState(true);
+  const chatLocallyUpdatedTripIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -871,6 +918,7 @@ export default function PlannerPage() {
   }, [user, authLoading]);
 
   const activeTrip = trips.find((t) => t.id === activeId) ?? null;
+  const activeTripId = activeTrip?.id ?? null;
 
   // Auto-switch to editor on mobile when a trip is selected
   useEffect(() => {
@@ -878,6 +926,78 @@ export default function PlannerPage() {
     const timer = window.setTimeout(() => setMobileTab("chat"), 0);
     return () => window.clearTimeout(timer);
   }, [activeId]);
+
+  useEffect(() => {
+    if (!activeTripId) {
+      queueMicrotask(() => {
+        setPlannerMessages(INITIAL_PLANNER_MESSAGES);
+        setTripIntent({});
+        setPlanningSteps([]);
+        setAiError("");
+        setAssistantThinking(false);
+        setAiResult(null);
+        setDraftDialogOpen(false);
+      });
+      return;
+    }
+
+    const tripId = activeTripId;
+    let cancelled = false;
+
+    async function loadTripChat() {
+      if (chatLocallyUpdatedTripIdRef.current === tripId) {
+        chatLocallyUpdatedTripIdRef.current = null;
+        return;
+      }
+
+      setTripIntent({});
+      setPlanningSteps([]);
+      setAiError("");
+      setAssistantThinking(false);
+      setAiResult(null);
+      setDraftDialogOpen(false);
+
+      if (!user) {
+        setPlannerMessages(loadLocalTripChat(tripId));
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("trip_chat_messages")
+        .select("id, role, text, action, created_at")
+        .eq("trip_id", tripId)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("[planner] chat load error:", error);
+        setPlannerMessages(INITIAL_PLANNER_MESSAGES);
+        return;
+      }
+
+      const messages = (data ?? [])
+        .filter((message) =>
+          (message.role === "assistant" || message.role === "user")
+          && typeof message.text === "string"
+        )
+        .map((message) => ({
+          id: message.id as string,
+          role: message.role as PlannerMessage["role"],
+          text: message.text as string,
+          action: message.action === "draft" || message.action === "apply" ? message.action : undefined,
+        }));
+
+      setPlannerMessages(normalizePlannerMessages(messages));
+    }
+
+    void loadTripChat();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTripId, user]);
 
   const updateTrip = useCallback((updated: Trip) => {
     setTrips((prev) => {
@@ -896,7 +1016,7 @@ export default function PlannerPage() {
     }
   }, [user]);
 
-  const resetPlannerChat = () => {
+  const resetPlannerChat = (tripId = activeTrip?.id) => {
     setPlannerMessages(INITIAL_PLANNER_MESSAGES);
     setTripIntent({});
     setPlanningSteps([]);
@@ -907,6 +1027,12 @@ export default function PlannerPage() {
     setDraftDialogOpen(false);
     setParkSearch("");
     setParkResults([]);
+    if (!tripId) return;
+    if (user) {
+      void supabase.from("trip_chat_messages").delete().eq("trip_id", tripId).eq("user_id", user.id);
+    } else {
+      deleteLocalTripChat(tripId);
+    }
   };
 
   const newTrip = (starter?: { name?: string; notes?: string }) => {
@@ -922,7 +1048,7 @@ export default function PlannerPage() {
     const next = [trip, ...trips];
     setTrips(next);
     setActiveId(trip.id);
-    resetPlannerChat();
+    resetPlannerChat(trip.id);
     if (user) {
       supabase.from("trips").insert({
         id: trip.id,
@@ -979,8 +1105,10 @@ export default function PlannerPage() {
     setActiveId(next[0]?.id ?? null);
     if (user) {
       void supabase.from("trips").delete().eq("id", id).eq("user_id", user.id);
+      void supabase.from("trip_chat_messages").delete().eq("trip_id", id).eq("user_id", user.id);
     } else {
       saveTrips(next);
+      deleteLocalTripChat(id);
     }
   };
 
@@ -1050,7 +1178,7 @@ export default function PlannerPage() {
       } else {
         saveTrips(next);
       }
-      resetPlannerChat();
+      resetPlannerChat(trip.id);
       return;
     }
     updateTrip({ ...activeTrip, stops: [...activeTrip.stops, stop] });
@@ -1092,9 +1220,25 @@ export default function PlannerPage() {
     });
   };
 
-  const addPlannerMessage = (message: Omit<PlannerMessage, "id">) => {
+  const addPlannerMessage = (message: Omit<PlannerMessage, "id">, tripId = activeTrip?.id) => {
     if (message.role === "assistant") setAssistantThinking(false);
-    setPlannerMessages((prev) => [...prev, { ...message, id: createLocalId("msg") }]);
+    const nextMessage = { ...message, id: createLocalId("msg") };
+    if (tripId) chatLocallyUpdatedTripIdRef.current = tripId;
+    setPlannerMessages((prev) => {
+      const next = [...prev, nextMessage];
+      if (tripId && !user) saveLocalTripChat(tripId, next);
+      return next;
+    });
+
+    if (tripId && user) {
+      void supabase.from("trip_chat_messages").insert({
+        trip_id: tripId,
+        user_id: user.id,
+        role: nextMessage.role,
+        text: nextMessage.text,
+        action: nextMessage.action ?? null,
+      });
+    }
   };
 
   const askPlannerAgent = async (message: string): Promise<PlannerAgentResponse | null> => {
@@ -1145,7 +1289,7 @@ export default function PlannerPage() {
           role: "assistant",
           text: `I drafted ${data.days.length} ${data.days.length === 1 ? "day" : "days"} for ${tripOverride.name || "this trip"}. Review it, then apply it to update the editable stops.`,
           action: "apply",
-        });
+        }, tripOverride.id);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong.";
@@ -1154,7 +1298,7 @@ export default function PlannerPage() {
         addPlannerMessage({
           role: "assistant",
           text: `I could not draft the itinerary yet: ${message}`,
-        });
+        }, tripOverride.id);
       }
     } finally {
       setAiLoading(false);
@@ -1261,8 +1405,6 @@ export default function PlannerPage() {
     const text = prompt.trim();
     if (!text) return;
     setChatInput("");
-    addPlannerMessage({ role: "user", text });
-    setAssistantThinking(true);
 
     let workingTrip = activeTrip;
     if (!workingTrip) {
@@ -1295,6 +1437,10 @@ export default function PlannerPage() {
       }
     }
 
+    addPlannerMessage({ role: "user", text }, workingTrip.id);
+    setAssistantThinking(true);
+    const addWorkingMessage = (message: Omit<PlannerMessage, "id">) => addPlannerMessage(message, workingTrip.id);
+
     const agentResponse = await askPlannerAgent(text).catch(() => {
       setAssistantThinking(false);
       return null;
@@ -1317,7 +1463,7 @@ export default function PlannerPage() {
     updateTrip(tripWithIntent);
 
     if (onlyParkName) {
-      addPlannerMessage({
+      addWorkingMessage({
         role: "assistant",
         text: buildFollowUpQuestion(nextIntent, hasStops, hasDates, hasTripLength),
         suggestions: buildFollowUpSuggestions(nextIntent),
@@ -1335,7 +1481,7 @@ export default function PlannerPage() {
         if (shouldDraft) {
           setAiLoading(true);
           setPlanningSteps(PLANNING_STEPS);
-          addPlannerMessage({
+          addWorkingMessage({
             role: "assistant",
             text: agentResponse?.message ?? "I have enough to start. I am matching the park to TrailQuest data before drafting the route.",
           });
@@ -1373,7 +1519,7 @@ export default function PlannerPage() {
                 .map((parkCode) => unresolvedOptions.find((park) => park.parkCode === parkCode))
                 .filter((park): park is Park => Boolean(park))
                 .slice(0, 4);
-              addPlannerMessage({
+              addWorkingMessage({
                 role: "assistant",
                 text: parkOptions.length
                   ? "I found possible official park matches. Pick the missing park here in chat, then I will draft the itinerary."
@@ -1405,7 +1551,7 @@ export default function PlannerPage() {
               updateTrip(updatedTrip);
               setParkSearch("");
               setParkResults([]);
-              addPlannerMessage({
+              addWorkingMessage({
                 role: "assistant",
                 text: `I matched ${fallbackParks.map((park) => park.fullName).join(" and ")} from the built-in park list. I will draft the itinerary now.`,
               });
@@ -1415,7 +1561,7 @@ export default function PlannerPage() {
             const destinationExample = requestedDestinations.length
               ? requestedDestinations.map((destination) => `${destination.replace(/\b\w/g, (char) => char.toUpperCase())} National Park`).join(" and ")
               : "the full park name";
-            addPlannerMessage({
+            addWorkingMessage({
               role: "assistant",
               text: `I could not load live park matches yet. Try the destination again by full official name, like “${destinationExample}”.`,
               parkOptions: fallbackParks.length ? fallbackParks : undefined,
@@ -1423,13 +1569,13 @@ export default function PlannerPage() {
           }
           return;
         }
-        addPlannerMessage({
+        addWorkingMessage({
           role: "assistant",
           text: buildFollowUpQuestion(nextIntent, hasStops, hasDates, hasTripLength),
           suggestions: buildFollowUpSuggestions(nextIntent),
         });
       } else {
-        addPlannerMessage({
+        addWorkingMessage({
           role: "assistant",
           text: buildFollowUpQuestion(nextIntent, hasStops, hasDates, hasTripLength),
           suggestions: buildFollowUpSuggestions(nextIntent),
@@ -1439,7 +1585,7 @@ export default function PlannerPage() {
     }
 
     if (!shouldDraft) {
-      addPlannerMessage({
+      addWorkingMessage({
         role: "assistant",
         text: buildFollowUpQuestion(nextIntent, hasStops, hasDates, hasTripLength),
         suggestions: buildFollowUpSuggestions(nextIntent),
@@ -1447,7 +1593,7 @@ export default function PlannerPage() {
       return;
     }
 
-    addPlannerMessage({
+    addWorkingMessage({
       role: "assistant",
       text: agentResponse?.message ?? "I have enough to draft this around your stops, dates, starting place, travel style, weather assumptions, road access, and packing needs.",
     });
@@ -1913,7 +2059,7 @@ export default function PlannerPage() {
                           <TooltipTrigger asChild>
                             <Button
                               type="button"
-                              onClick={resetPlannerChat}
+                              onClick={() => resetPlannerChat()}
                               variant="outline"
                               size="icon-lg"
                               className="h-11 w-11 rounded-full border-[#d8ddd8] bg-white text-[var(--ink)] hover:bg-[var(--surface)]"

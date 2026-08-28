@@ -1,8 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const ITINERARY_MODELS = ["claude-sonnet-5", "claude-haiku-4-5-20251001"] as const;
+const SONNET_ITINERARY_MODEL = "claude-sonnet-5";
+const HAIKU_ITINERARY_MODEL = "claude-haiku-4-5-20251001";
 const JSON_REPAIR_MODEL = "claude-haiku-4-5-20251001";
+const SONNET_TIMEOUT_MS = 12_000;
 
 const SYSTEM_PROMPT = `You are TrailQuest's senior national park itinerary planner. Given parks, travel dates, trip length, and planning context collected by a separate follow-up agent, generate a practical day-by-day itinerary that feels specific, useful, and safe.
 
@@ -68,24 +70,65 @@ async function repairItineraryJson(client: Anthropic, raw: string): Promise<unkn
   return JSON.parse(extractJsonObject(repaired));
 }
 
-async function createItineraryMessage(client: Anthropic, userMessage: string) {
-  let lastError: unknown = null;
+function getErrorDetails(err: unknown) {
+  if (err instanceof Error) {
+    return {
+      name: err.name,
+      message: err.message,
+      status: "status" in err ? (err as { status?: unknown }).status : undefined,
+      type: "type" in err ? (err as { type?: unknown }).type : undefined,
+    };
+  }
 
-  for (const model of ITINERARY_MODELS) {
-    try {
-      return await client.messages.create({
+  return {
+    name: "UnknownError",
+    message: String(err),
+  };
+}
+
+function logItineraryError(category: string, err: unknown, context?: Record<string, unknown>) {
+  console.error("[generate-itinerary]", {
+    category,
+    ...context,
+    error: getErrorDetails(err),
+  });
+}
+
+async function createItineraryMessage(client: Anthropic, userMessage: string) {
+  const createMessage = (model: string, timeoutMs?: number) => {
+    const controller = new AbortController();
+    const timeout = timeoutMs
+      ? setTimeout(() => controller.abort(new Error(`${model} timed out after ${timeoutMs}ms`)), timeoutMs)
+      : null;
+
+    return client.messages.create(
+      {
         model,
         max_tokens: model.includes("sonnet") ? 4096 : 2048,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userMessage }],
-      });
-    } catch (err) {
-      lastError = err;
-      console.warn(`[generate-itinerary] ${model} failed; trying fallback if available`, err);
-    }
+      },
+      { signal: controller.signal },
+    ).finally(() => {
+      if (timeout) clearTimeout(timeout);
+    });
+  };
+
+  try {
+    return await createMessage(SONNET_ITINERARY_MODEL, SONNET_TIMEOUT_MS);
+  } catch (err) {
+    logItineraryError("sonnet_failed_using_haiku_fallback", err, {
+      model: SONNET_ITINERARY_MODEL,
+      timeoutMs: SONNET_TIMEOUT_MS,
+    });
   }
 
-  throw lastError instanceof Error ? lastError : new Error("All itinerary models failed");
+  try {
+    return await createMessage(HAIKU_ITINERARY_MODEL);
+  } catch (err) {
+    logItineraryError("haiku_fallback_failed", err, { model: HAIKU_ITINERARY_MODEL });
+    throw err;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -123,13 +166,24 @@ Spread the parks across the available days. If there are more days than parks, g
     let itinerary;
     try {
       itinerary = JSON.parse(extractJsonObject(raw));
-    } catch {
-      itinerary = await repairItineraryJson(client, raw);
+    } catch (jsonErr) {
+      logItineraryError("invalid_model_json_trying_repair", jsonErr, {
+        rawPreview: raw.slice(0, 300),
+      });
+
+      try {
+        itinerary = await repairItineraryJson(client, raw);
+      } catch (repairErr) {
+        logItineraryError("json_repair_failed", repairErr, {
+          rawPreview: raw.slice(0, 300),
+        });
+        throw repairErr;
+      }
     }
 
     return NextResponse.json(itinerary);
   } catch (err) {
-    console.error("[generate-itinerary]", err);
+    logItineraryError("request_failed", err);
     return NextResponse.json(
       { error: "Could not generate the itinerary right now. Try again in a minute, or revise the trip details and draft again." },
       { status: 500 }
